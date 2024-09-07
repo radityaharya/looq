@@ -16,7 +16,7 @@ export default defineConfig({
 	],
 	build: {
 		minify: true,
-		outDir: "./dist",
+		outDir: "./dist"
 	},
 	resolve: {
 		alias: {
@@ -35,5 +35,13 @@ export default defineConfig({
 	server: {
 		host: true,
 		port: 5000,
+		proxy: process.env.PROXY_API
+			? {
+					"/api": {
+						target: "http://localhost:3000",
+						changeOrigin: true,
+					},
+				}
+			: undefined,
 	},
 });

@@ -1,7 +1,13 @@
 import { zValidator } from "@hono/zod-validator";
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { handle } from "hono/cloudflare-pages";
 import { z } from "zod";
+import { stream, streamSSE } from "hono/streaming";
+import { createOpenAI } from "@ai-sdk/openai";
+import { streamText, generateText } from "ai";
+import { env } from "hono/adapter";
+import { logger } from "hono/logger";
+import { getEnv } from "src/lib/env";
 
 const searchSchema = z.object({
 	q: z.string(),
@@ -13,6 +19,12 @@ const searchSchema = z.object({
 
 const autocompleteSchema = z.object({
 	q: z.string(),
+});
+
+const summarySchema = z.object({
+	query: z.string().optional(),
+	urls: z.array(z.string()).optional(),
+	content: z.string().optional(),
 });
 
 const searchResultSchema = z.object({
@@ -124,17 +136,82 @@ const fetchAutocompleteResults = async ({
 	return autoCompleteResponse;
 };
 
+const reader = async (urls: string[] = []) => {
+	const limitedUrls = urls.slice(0, 2);
+
+	let content = "";
+	const fetchPromises = limitedUrls.map(async (url) => {
+		const response = await fetch(`https://r.jina.ai/${url}`);
+		return response.text();
+	});
+
+	const results = await Promise.all(fetchPromises);
+	content = results.join("");
+	return content;
+};
+
+const fetchSummary = async ({
+	OPENAI_KEY,
+	OPENAI_URL,
+	data,
+	context,
+}: {
+	OPENAI_KEY: string;
+	OPENAI_URL: string;
+	data: z.infer<typeof summarySchema>;
+	context: Context;
+}) => {
+	const ai = createOpenAI({
+		apiKey: OPENAI_KEY,
+		baseURL: OPENAI_URL,
+	});
+
+	let prompt =
+		"You are tasked to Make a summary based on user query to a search engine. Only return the content in markdown format without title or any other information. make it concise and digestable. refrain from advertising the result or making any call to actions. be Objective. Bold key points\n";
+	if (data.query) {
+		prompt += `The user query is: ${data.query}`;
+	}
+	if (data.urls) {
+		const content = await reader(data.urls);
+		prompt += `The following are the content of the top search results: \n${content}`;
+	}
+
+	console.log("Prompt", prompt);
+
+	return streamSSE(context, async (stream) => {
+		const result = await streamText({
+			model: ai("google/gemini-1.5-flash"),
+			prompt,
+			maxTokens: 500,
+		});
+
+		let cummulativeResult = "";
+
+		for await (const chunk of result.textStream) {
+			cummulativeResult += chunk;
+			await stream.writeSSE({
+				data: JSON.stringify({ content: cummulativeResult }),
+				event: "ai-response",
+			});
+		}
+	});
+};
+
 type Bindings = {
 	SEARXNG_URL: string;
 	CF_ACCESS_CLIENT_ID: string | undefined;
 	CF_ACCESS_CLIENT_SECRET: string | undefined;
+	OPENAI_KEY: string;
+	OPENAI_URL: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>()
 	.basePath("/api")
+	.use(logger())
 	.get("/search", zValidator("query", searchSchema), async (c) => {
 		const query = c.req.valid("query");
-		const { SEARXNG_URL, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET } = c.env;
+		const { SEARXNG_URL, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET } =
+			getEnv(c);
 		try {
 			const fetchOptions: any = {
 				query,
@@ -157,7 +234,8 @@ const app = new Hono<{ Bindings: Bindings }>()
 	})
 	.get("/autocompleter", zValidator("query", autocompleteSchema), async (c) => {
 		const query = c.req.valid("query");
-		const { SEARXNG_URL, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET } = c.env;
+		const { SEARXNG_URL, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET } =
+			getEnv(c);
 		try {
 			const fetchOptions: any = {
 				query,
@@ -177,6 +255,16 @@ const app = new Hono<{ Bindings: Bindings }>()
 			console.error(e);
 			return c.json({ error: e.message }, 500);
 		}
+	})
+	.post("/summary", async (c) => {
+		const { OPENAI_KEY, OPENAI_URL } = getEnv(c);
+		const data = await c.req.json();
+		return fetchSummary({
+			OPENAI_KEY,
+			OPENAI_URL,
+			data,
+			context: c,
+		});
 	});
 
 type AppType = typeof app;
@@ -191,4 +279,8 @@ export {
 	searchResultSchema,
 	searchDataResponseSchema,
 	autoCompleteResponseSchema,
+};
+export default {
+	port: 3000,
+	fetch: app.fetch,
 };
