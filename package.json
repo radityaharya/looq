@@ -10,6 +10,7 @@
 		"start:wrangler": "wrangler pages dev",
 		"start:vite": "vite preview --port 5000",
 		"build": "npm run typecheck && vite build",
+		"deploy": "wrangler pages deploy",
 		"typecheck": "tsc --noEmit",
 		"typecheck:watch": "tsc --noEmit --watch",
 		"lint": "biome check",

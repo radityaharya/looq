@@ -1,6 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
-import { env } from "hono/adapter";
 import { handle } from "hono/cloudflare-pages";
 import { z } from "zod";
 
@@ -125,18 +124,31 @@ const fetchAutocompleteResults = async ({
 	return autoCompleteResponse;
 };
 
-const app = new Hono()
+type Bindings = {
+	SEARXNG_URL: string;
+	CF_ACCESS_CLIENT_ID: string | undefined;
+	CF_ACCESS_CLIENT_SECRET: string | undefined;
+};
+
+const app = new Hono<{ Bindings: Bindings }>()
 	.basePath("/api")
 	.get("/search", zValidator("query", searchSchema), async (c) => {
 		const query = c.req.valid("query");
-		const { SEARXNG_URL, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET } =
-			env<Record<string, string>>(c);
+		const { SEARXNG_URL, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET } = c.env;
 		try {
-			const data = await fetchSearchResults({
+			const fetchOptions: any = {
 				query,
 				baseUrl: SEARXNG_URL,
-				cfAccessCredentials: { CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET },
-			});
+			};
+
+			if (CF_ACCESS_CLIENT_ID && CF_ACCESS_CLIENT_SECRET) {
+				fetchOptions.cfAccessCredentials = {
+					CF_ACCESS_CLIENT_ID,
+					CF_ACCESS_CLIENT_SECRET,
+				};
+			}
+
+			const data = await fetchSearchResults(fetchOptions);
 			return c.json(data);
 		} catch (e: any) {
 			console.error(e);
@@ -145,14 +157,21 @@ const app = new Hono()
 	})
 	.get("/autocompleter", zValidator("query", autocompleteSchema), async (c) => {
 		const query = c.req.valid("query");
-		const { SEARXNG_URL, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET } =
-			env<Record<string, string>>(c);
+		const { SEARXNG_URL, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET } = c.env;
 		try {
-			const data = await fetchAutocompleteResults({
+			const fetchOptions: any = {
 				query,
 				baseUrl: SEARXNG_URL,
-				cfAccessCredentials: { CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET },
-			});
+			};
+
+			if (CF_ACCESS_CLIENT_ID && CF_ACCESS_CLIENT_SECRET) {
+				fetchOptions.cfAccessCredentials = {
+					CF_ACCESS_CLIENT_ID,
+					CF_ACCESS_CLIENT_SECRET,
+				};
+			}
+
+			const data = await fetchAutocompleteResults(fetchOptions);
 			return c.json(data);
 		} catch (e: any) {
 			console.error(e);
