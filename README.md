@@ -1,0 +1,2 @@
+## Looq
+A SearxNG frontend
