@@ -11,9 +11,10 @@ import type { z } from "zod";
 export const RightColumn: React.FC<{
 	data: z.infer<typeof searchDataResponseSchema>;
 	summary: string | null;
-}> = ({ data, summary }) => {
+	queryHandler: (query: string) => void;
+}> = ({ data, summary, queryHandler }) => {
 	return (
-		<Card className="bg-card shadow-lg border-primary/10">
+		<Card className="bg-card w-full shadow-lg border-primary/10">
 			<CardHeader className="bg-primary/5 border-b border-primary/10">
 				<CardTitle className="flex items-center text-lg font-bold">
 					Looq Summary
@@ -41,7 +42,7 @@ export const RightColumn: React.FC<{
 				) : (
 					<p className="text-sm text-neutral-400/70">Loading summary...</p>
 				)}
-				<Separator className="my-4" />
+				<Separator className="my-4 w-full" />
 				{data.infoboxes?.map((infobox, index) => (
 					<div key={infobox.infobox} className="mb-6">
 						<h3 className="font-semibold mb-2 text-sm">{infobox.infobox}</h3>
@@ -61,18 +62,24 @@ export const RightColumn: React.FC<{
 						</div>
 					</div>
 				))}
-				<h3 className="font-semibold mb-3 text-sm">Related Searches</h3>
-				<div className="flex flex-wrap gap-2">
-					{data.suggestions?.map((suggestion, index) => (
-						<Badge
-							key={suggestion}
-							variant="outline"
-							className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors text-[10px]"
-						>
-							{suggestion}
-						</Badge>
-					))}
-				</div>
+
+				{data.suggestions && data.suggestions.length > 0 && (
+					<>
+						<h3 className="font-semibold mb-3 text-sm">Related Searches</h3>
+						<div className="flex flex-wrap gap-2">
+							{data.suggestions.map((suggestion, index) => (
+								<Badge
+									key={suggestion}
+									variant="outline"
+									className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors text-[10px]"
+									onClick={() => queryHandler(suggestion)}
+								>
+									{suggestion}
+								</Badge>
+							))}
+						</div>
+					</>
+				)}
 			</CardContent>
 		</Card>
 	);
@@ -82,10 +89,10 @@ export const RightColumnSkeleton: React.FC<{ count?: number }> = ({
 	count = 3,
 }) => {
 	return (
-		<Card className="bg-card shadow-lg border-primary/10">
+		<Card className="bg-card w-full shadow-lg border-primary/10">
 			<CardHeader className="bg-primary/5 border-b border-primary/10">
 				<CardTitle className="flex items-center text-lg font-bold">
-					Looq Summary
+					Insights
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="pt-6">

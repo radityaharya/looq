@@ -27,10 +27,11 @@ export const SearchResults: React.FC<{
 						className="text-xl text-white hover:underline flex items-center gap-2"
 					>
 						{result.title}
-						<ExternalLink className="h-4 w-4" />
 					</a>
 					<div className="flex items-center gap-2 text-xs text-neutral-400 mt-1 flex-wrap">
-						<span>{result.url}</span>
+						<span className="max-w-xs truncate">
+							{result.url.replace(/(^\w+:|^)\/\//, "")}
+						</span>
 						<Separator orientation="vertical" className="h-3 bg-neutral-700" />
 						<TooltipProvider>
 							<Tooltip>
@@ -60,7 +61,9 @@ export const SearchResults: React.FC<{
 							{result.category}
 						</Badge>
 					</div>
-					<p className="mt-2 text-sm text-neutral-300">{result.content}</p>
+					<p className="mt-2 text-sm text-neutral-300 overflow-hidden truncate">
+						{result.content}
+					</p>
 				</div>
 			))}
 		</>

@@ -259,3 +259,17 @@ body {
   opacity: 0;
   transform: scale(0.8) translate(-50%, -50%);
 }
+
+.transition-width {
+  transition: width 0.3s ease-in-out;
+}
+
+.transition-visibility {
+  transition: visibility 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  opacity: 1;
+}
+
+.hidden-visibility {
+  visibility: hidden;
+  opacity: 0;
+}

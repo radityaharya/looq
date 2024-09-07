@@ -5,7 +5,7 @@ import { z } from "zod";
 import { stream, streamSSE } from "hono/streaming";
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText, generateText } from "ai";
-import { env } from "hono/adapter";
+import { cache } from "hono/cache";
 import { logger } from "hono/logger";
 import { getEnv } from "src/lib/env";
 
@@ -107,7 +107,7 @@ const fetchSearchResults = async ({
 	const searchParams = new URLSearchParams(
 		query as { [key: string]: string },
 	).toString();
-	const searchUrl = `${baseUrl}/search?${searchParams}&format=json`;
+	const searchUrl = `${baseUrl}/search?${searchParams}&format=json&disabled_engines=qwant`;
 
 	const response = await accessFetch(searchUrl, cfAccessCredentials);
 	const data = await response.json();
@@ -175,12 +175,14 @@ const fetchSummary = async ({
 		const content = await reader(data.urls);
 		prompt += `The following are the content of the top search results: \n${content}`;
 	}
+	prompt +=
+		"\nif the content contains Chapta block or any errors, Ignore the content and use your own knowledge to generate the summary\n";
 
 	console.log("Prompt", prompt);
 
 	return streamSSE(context, async (stream) => {
 		const result = await streamText({
-			model: ai("google/gemini-1.5-flash"),
+			model: ai("groq/llama-3.1-70b-versatile"),
 			prompt,
 			maxTokens: 500,
 		});
@@ -265,7 +267,35 @@ const app = new Hono<{ Bindings: Bindings }>()
 			data,
 			context: c,
 		});
-	});
+	})
+	.get(
+		"*",
+		cache({
+			cacheName: "looq",
+			cacheControl: "max-age=3600",
+			async keyGenerator(c) {
+				return crypto.subtle
+					.digest("SHA-256", new TextEncoder().encode(await c.req.json()))
+					.then((hash) => {
+						return Buffer.from(hash).toString("base64");
+					});
+			},
+		}),
+	)
+	.post(
+		"*",
+		cache({
+			cacheName: "looq",
+			cacheControl: "max-age=3600",
+			async keyGenerator(c) {
+				return crypto.subtle
+					.digest("SHA-256", new TextEncoder().encode(await c.req.json()))
+					.then((hash) => {
+						return Buffer.from(hash).toString("base64");
+					});
+			},
+		}),
+	);
 
 type AppType = typeof app;
 
