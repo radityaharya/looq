@@ -16,7 +16,7 @@ export default defineConfig({
 	],
 	build: {
 		minify: true,
-		outDir: "./build",
+		outDir: "./dist",
 	},
 	resolve: {
 		alias: {

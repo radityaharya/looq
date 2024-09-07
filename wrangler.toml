@@ -1,6 +1,6 @@
 name="looq"
 compatibility_date = "2024-09-03"
-pages_build_output_dir="./build"
+pages_build_output_dir="./dist"
 
 
 # Automatically place your workloads in an optimal location to minimize latency.
