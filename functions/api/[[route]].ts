@@ -50,20 +50,55 @@ const searchDataResponseSchema = z.object({
 
 const autoCompleteResponseSchema = z.tuple([z.string(), z.array(z.string())]);
 
+const accessFetch = async (
+	url: string,
+	cfAccessCredentials: {
+		CF_ACCESS_CLIENT_ID: string;
+		CF_ACCESS_CLIENT_SECRET: string;
+	},
+	opts: RequestInit = {},
+) => {
+	const headers = new Headers();
+	headers.append("Content-Type", "application/json");
+	if (
+		cfAccessCredentials.CF_ACCESS_CLIENT_ID &&
+		cfAccessCredentials.CF_ACCESS_CLIENT_SECRET
+	) {
+		headers.append(
+			"Cf-Access-Client-Id",
+			cfAccessCredentials.CF_ACCESS_CLIENT_ID,
+		);
+		headers.append(
+			"Cf-Access-Client-Secret",
+			cfAccessCredentials.CF_ACCESS_CLIENT_SECRET,
+		);
+	}
+
+	const response = await fetch(url, {
+		...opts,
+		headers,
+	});
+	return response;
+};
+
 const fetchSearchResults = async ({
 	query,
 	baseUrl,
-}: { query: z.infer<typeof searchSchema>; baseUrl: string }) => {
+	cfAccessCredentials,
+}: {
+	query: z.infer<typeof searchSchema>;
+	baseUrl: string;
+	cfAccessCredentials: {
+		CF_ACCESS_CLIENT_ID: string;
+		CF_ACCESS_CLIENT_SECRET: string;
+	};
+}) => {
 	const searchParams = new URLSearchParams(
 		query as { [key: string]: string },
 	).toString();
 	const searchUrl = `${baseUrl}/search?${searchParams}&format=json`;
 
-	const response = await fetch(searchUrl, {
-		headers: {
-			"Content-Type": "application/json",
-		},
-	});
+	const response = await accessFetch(searchUrl, cfAccessCredentials);
 	const data = await response.json();
 	const searchDataResponse = searchDataResponseSchema.parse(data);
 	return searchDataResponse;
@@ -72,15 +107,19 @@ const fetchSearchResults = async ({
 const fetchAutocompleteResults = async ({
 	query,
 	baseUrl,
-}: { query: z.infer<typeof autocompleteSchema>; baseUrl: string }) => {
+	cfAccessCredentials,
+}: {
+	query: z.infer<typeof autocompleteSchema>;
+	baseUrl: string;
+	cfAccessCredentials: {
+		CF_ACCESS_CLIENT_ID: string;
+		CF_ACCESS_CLIENT_SECRET: string;
+	};
+}) => {
 	const searchParams = new URLSearchParams(query).toString();
 	const searchUrl = `${baseUrl}/autocompleter?${searchParams}`;
 
-	const response = await fetch(searchUrl, {
-		headers: {
-			"Content-Type": "application/json",
-		},
-	});
+	const response = await accessFetch(searchUrl, cfAccessCredentials);
 	const data = await response.json();
 	const autoCompleteResponse = autoCompleteResponseSchema.parse(data);
 	return autoCompleteResponse;
@@ -90,9 +129,14 @@ const app = new Hono()
 	.basePath("/api")
 	.get("/search", zValidator("query", searchSchema), async (c) => {
 		const query = c.req.valid("query");
-		const { SEARXNG_URL } = env<Record<string, string>>(c);
+		const { SEARXNG_URL, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET } =
+			env<Record<string, string>>(c);
 		try {
-			const data = await fetchSearchResults({ query, baseUrl: SEARXNG_URL });
+			const data = await fetchSearchResults({
+				query,
+				baseUrl: SEARXNG_URL,
+				cfAccessCredentials: { CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET },
+			});
 			return c.json(data);
 		} catch (e: any) {
 			console.error(e);
@@ -101,11 +145,13 @@ const app = new Hono()
 	})
 	.get("/autocompleter", zValidator("query", autocompleteSchema), async (c) => {
 		const query = c.req.valid("query");
-		const { SEARXNG_URL } = env<Record<string, string>>(c);
+		const { SEARXNG_URL, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET } =
+			env<Record<string, string>>(c);
 		try {
 			const data = await fetchAutocompleteResults({
 				query,
 				baseUrl: SEARXNG_URL,
+				cfAccessCredentials: { CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET },
 			});
 			return c.json(data);
 		} catch (e: any) {
