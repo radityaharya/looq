@@ -15,8 +15,8 @@ export default defineConfig({
 		react(),
 	],
 	build: {
-		minify: true,
-		outDir: "./dist"
+		minify: "terser",
+		outDir: "./dist",
 	},
 	resolve: {
 		alias: {
@@ -43,5 +43,8 @@ export default defineConfig({
 					},
 				}
 			: undefined,
+	},
+	optimizeDeps: {
+		include: ["react", "react-dom", "react/jsx-runtime"],
 	},
 });

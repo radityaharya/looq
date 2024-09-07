@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { searchDataResponseSchema } from "functions/api/[[route]]";
+import type React from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type React from "react";
 import type { z } from "zod";
 
 export const RightColumn: React.FC<{

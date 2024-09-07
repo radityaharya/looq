@@ -14,12 +14,12 @@ import { HistoryIcon, SearchIcon } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { SSE } from "sse.js";
 // import { isLocal } from "src/lib/env";
 import type { z } from "zod";
-import { SSE } from "sse.js";
+import Eyeball from "../ui/eyeball";
 import { RightColumn, RightColumnSkeleton } from "./rightColumn";
 import { SearchResults, SearchResultsSkeleton } from "./searchResults";
-import Eyeball from "../ui/eyeball";
 
 const SearchBar = ({
 	searchQuery,
@@ -235,19 +235,21 @@ const SearchComponent: React.FC = () => {
 	return (
 		<div className="min-h-screen text-foreground flex flex-col">
 			<main className="flex-grow flex flex-col items-start mx-4 sm:mx-24 py-12">
-				<div className="w-full flex">
+				<div className="w-full flex gap-2 items-center mb-8">
 					<div className="w-full">
-						<h1 className="text-4xl font-bold mb-2 text-start">Looq</h1>
-						<p className="text-xs text-neutral-400/50 mb-8 text-start">
+						<div className="flex flex-row gap-1 items-center">
+							<Eyeball size={40} />
+							<h1 className="text-4xl font-bold mb-2 text-start">Looq</h1>
+						</div>
+						<p className="text-xs text-neutral-400/50 text-start">
 							powered by <span className="font-bold">SearXNG</span>
 						</p>
 					</div>
-					<Eyeball size={60} />
 				</div>
-				<div className="flex flex-col sm:flex-row w-full gap-8">
+				<div className="flex flex-col sm:flex-row w-full">
 					<div
 						className={`w-full transition-width ${
-							searchQuery.length === 0 || isLoading ? "w-full" : "sm:w-2/3"
+							searchQuery.length === 0 || isLoading ? "w-full" : "sm:w-2/3 mr-8"
 						}`}
 						data-expand={searchQuery.length === 0 || isLoading}
 					>

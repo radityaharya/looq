@@ -1,13 +1,13 @@
-import { zValidator } from "@hono/zod-validator";
-import { type Context, Hono } from "hono";
-import { handle } from "hono/cloudflare-pages";
-import { z } from "zod";
-import { stream, streamSSE } from "hono/streaming";
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText, generateText } from "ai";
+import { zValidator } from "@hono/zod-validator";
+import { streamText } from "ai";
+import { type Context, Hono } from "hono";
 import { cache } from "hono/cache";
+import { handle } from "hono/cloudflare-pages";
 import { logger } from "hono/logger";
+import { streamSSE } from "hono/streaming";
 import { getEnv } from "src/lib/env";
+import { z } from "zod";
 
 const searchSchema = z.object({
 	q: z.string(),
@@ -61,14 +61,12 @@ const searchDataResponseSchema = z.object({
 
 const autoCompleteResponseSchema = z.tuple([z.string(), z.array(z.string())]);
 
-const accessFetch = async (
-	url: string,
-	cfAccessCredentials: {
-		CF_ACCESS_CLIENT_ID: string;
-		CF_ACCESS_CLIENT_SECRET: string;
-	},
-	opts: RequestInit = {},
-) => {
+type CFAccessCredentials = {
+	CF_ACCESS_CLIENT_ID: string;
+	CF_ACCESS_CLIENT_SECRET: string;
+};
+
+const createHeaders = (cfAccessCredentials: CFAccessCredentials): Headers => {
 	const headers = new Headers();
 	headers.append("Content-Type", "application/json");
 	if (
@@ -84,11 +82,19 @@ const accessFetch = async (
 			cfAccessCredentials.CF_ACCESS_CLIENT_SECRET,
 		);
 	}
+	return headers;
+};
 
-	const response = await fetch(url, {
-		...opts,
-		headers,
-	});
+const accessFetch = async (
+	url: string,
+	cfAccessCredentials: CFAccessCredentials,
+	opts: RequestInit = {},
+): Promise<Response> => {
+	const headers = createHeaders(cfAccessCredentials);
+	const response = await fetch(url, { ...opts, headers });
+	if (!response.ok) {
+		throw new Error(`Fetch failed with status: ${response.status}`);
+	}
 	return response;
 };
 
@@ -99,11 +105,8 @@ const fetchSearchResults = async ({
 }: {
 	query: z.infer<typeof searchSchema>;
 	baseUrl: string;
-	cfAccessCredentials: {
-		CF_ACCESS_CLIENT_ID: string;
-		CF_ACCESS_CLIENT_SECRET: string;
-	};
-}) => {
+	cfAccessCredentials: CFAccessCredentials;
+}): Promise<z.infer<typeof searchDataResponseSchema>> => {
 	const searchParams = new URLSearchParams(
 		query as { [key: string]: string },
 	).toString();
@@ -111,8 +114,7 @@ const fetchSearchResults = async ({
 
 	const response = await accessFetch(searchUrl, cfAccessCredentials);
 	const data = await response.json();
-	const searchDataResponse = searchDataResponseSchema.parse(data);
-	return searchDataResponse;
+	return searchDataResponseSchema.parse(data);
 };
 
 const fetchAutocompleteResults = async ({
@@ -122,32 +124,27 @@ const fetchAutocompleteResults = async ({
 }: {
 	query: z.infer<typeof autocompleteSchema>;
 	baseUrl: string;
-	cfAccessCredentials: {
-		CF_ACCESS_CLIENT_ID: string;
-		CF_ACCESS_CLIENT_SECRET: string;
-	};
-}) => {
+	cfAccessCredentials: CFAccessCredentials;
+}): Promise<z.infer<typeof autoCompleteResponseSchema>> => {
 	const searchParams = new URLSearchParams(query).toString();
 	const searchUrl = `${baseUrl}/autocompleter?${searchParams}`;
 
 	const response = await accessFetch(searchUrl, cfAccessCredentials);
 	const data = await response.json();
-	const autoCompleteResponse = autoCompleteResponseSchema.parse(data);
-	return autoCompleteResponse;
+	return autoCompleteResponseSchema.parse(data);
 };
 
-const reader = async (urls: string[] = []) => {
+const fetchContent = async (urls: string[]): Promise<string> => {
 	const limitedUrls = urls.slice(0, 2);
-
-	let content = "";
 	const fetchPromises = limitedUrls.map(async (url) => {
 		const response = await fetch(`https://r.jina.ai/${url}`);
+		if (!response.ok) {
+			throw new Error(`Fetch failed with status: ${response.status}`);
+		}
 		return response.text();
 	});
-
 	const results = await Promise.all(fetchPromises);
-	content = results.join("");
-	return content;
+	return results.join("");
 };
 
 const fetchSummary = async ({
@@ -160,7 +157,7 @@ const fetchSummary = async ({
 	OPENAI_URL: string;
 	data: z.infer<typeof summarySchema>;
 	context: Context;
-}) => {
+}): Promise<any> => {
 	const ai = createOpenAI({
 		apiKey: OPENAI_KEY,
 		baseURL: OPENAI_URL,
@@ -172,13 +169,11 @@ const fetchSummary = async ({
 		prompt += `The user query is: ${data.query}`;
 	}
 	if (data.urls) {
-		const content = await reader(data.urls);
+		const content = await fetchContent(data.urls);
 		prompt += `The following are the content of the top search results: \n${content}`;
 	}
 	prompt +=
 		"\nif the content contains Chapta block or any errors, Ignore the content and use your own knowledge to generate the summary\n";
-
-	console.log("Prompt", prompt);
 
 	return streamSSE(context, async (stream) => {
 		const result = await streamText({
@@ -187,12 +182,12 @@ const fetchSummary = async ({
 			maxTokens: 500,
 		});
 
-		let cummulativeResult = "";
+		let cumulativeResult = "";
 
 		for await (const chunk of result.textStream) {
-			cummulativeResult += chunk;
+			cumulativeResult += chunk;
 			await stream.writeSSE({
-				data: JSON.stringify({ content: cummulativeResult }),
+				data: JSON.stringify({ content: cumulativeResult }),
 				event: "ai-response",
 			});
 		}
@@ -296,7 +291,6 @@ const app = new Hono<{ Bindings: Bindings }>()
 			},
 		}),
 	);
-
 type AppType = typeof app;
 
 export const onRequest = handle(app);
@@ -310,6 +304,7 @@ export {
 	searchDataResponseSchema,
 	autoCompleteResponseSchema,
 };
+
 export default {
 	port: 3000,
 	fetch: app.fetch,
