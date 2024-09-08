@@ -25,6 +25,7 @@ const summarySchema = z.object({
 	query: z.string().optional(),
 	urls: z.array(z.string()).optional(),
 	content: z.string().optional(),
+  model: z.string().default("groq/llama-3.1-70b-versatile"),
 });
 
 const searchResultSchema = z.object({
@@ -57,6 +58,18 @@ const searchDataResponseSchema = z.object({
 		)
 		.optional(),
 	suggestions: z.array(z.string()).optional(),
+});
+
+export const modelResponseSchema = z.object({
+	data: z.array(
+		z.object({
+			id: z.string(),
+			object: z.literal("object"),
+			created: z.number(),
+			owned_by: z.string(),
+		}),
+	),
+	object: z.literal("list"),
 });
 
 const autoCompleteResponseSchema = z.tuple([z.string(), z.array(z.string())]);
@@ -177,7 +190,7 @@ const fetchSummary = async ({
 
 	return streamSSE(context, async (stream) => {
 		const result = await streamText({
-			model: ai("groq/llama-3.1-70b-versatile"),
+			model: ai(data.model),
 			prompt,
 			maxTokens: 500,
 		});
@@ -191,7 +204,23 @@ const fetchSummary = async ({
 				event: "ai-response",
 			});
 		}
+
+		await stream.writeSSE({
+			data: JSON.stringify({ message: "DONE" }),
+			event: "DONE",
+		});
 	});
+};
+
+const fetchModels = async (context: Context) => {
+	const { OPENAI_KEY, OPENAI_URL } = getEnv(context);
+	const models = await fetch(`${OPENAI_URL}/models`, {
+		headers: {
+			Authorization: `Bearer ${OPENAI_KEY}`,
+		},
+	});
+	const data = await modelResponseSchema.parse(models.json());
+	return data;
 };
 
 type Bindings = {
@@ -262,6 +291,10 @@ const app = new Hono<{ Bindings: Bindings }>()
 			data,
 			context: c,
 		});
+	})
+	.get("/models", async (c) => {
+		const data = await fetchModels(c);
+		return c.json(data);
 	})
 	.get(
 		"*",
