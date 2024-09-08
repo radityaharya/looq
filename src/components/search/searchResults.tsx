@@ -17,9 +17,6 @@ export const SearchResults: React.FC<{
 }> = ({ searchData }) => {
 	return (
 		<>
-			<p className="text-sm text-neutral-400 mb-6">
-				About {searchData.number_of_results} results
-			</p>
 			{searchData.results.map((result, index) => (
 				<div key={result.url.replace(/\W/g, "")} className="mb-6">
 					<a

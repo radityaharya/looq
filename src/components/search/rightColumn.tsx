@@ -7,17 +7,17 @@ import type React from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { z } from "zod";
-
 export const RightColumn: React.FC<{
 	data: z.infer<typeof searchDataResponseSchema>;
 	summary: string | null;
 	queryHandler: (query: string) => void;
-}> = ({ data, summary, queryHandler }) => {
+	isStreamingSummary: boolean;
+}> = ({ data, summary, queryHandler, isStreamingSummary }) => {
 	return (
-		<Card className="bg-card w-full shadow-lg border-primary/10">
+		<Card className="bg-card w-full shadow-lg border-primary/10 h-[min-content]">
 			<CardHeader className="bg-primary/5 border-b border-primary/10">
 				<CardTitle className="flex items-center text-lg font-bold">
-					Looq Summary
+					Insights
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="pt-6">
