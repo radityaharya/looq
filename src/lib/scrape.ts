@@ -25,6 +25,10 @@ export const fetchContent = async ({
 				/* customCodeBlockTranslators (optional) */ undefined,
 			);
 			const markdown = nhm.translate(html);
+			// TODO: pass as a parameter
+			if (markdown.length > 500) {
+				return `${markdown.substring(0, 500)}...`;
+			}
 			return markdown;
 		} catch (error) {
 			console.error(`Error fetching URL ${url}:`);

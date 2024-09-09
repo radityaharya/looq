@@ -52,7 +52,7 @@ const SettingsDropdown = ({
 				<DropdownMenuGroup>
 					<DropdownMenuSub>
 						<DropdownMenuSubTrigger>
-							<span>Set Model</span>
+							<span>{selectedModel}</span>
 						</DropdownMenuSubTrigger>
 						<DropdownMenuPortal>
 							<DropdownMenuSubContent>
@@ -172,7 +172,7 @@ const SearchComponent: React.FC = () => {
 					.map((model: any) => model.id)
 					.sort((a: string, b: string) => b.localeCompare(a)),
 			);
-			setSelectedModel("groq/llama-3.1-70b-versatile");
+			setSelectedModel(selectedModel);
 		};
 		fetchModels();
 	}, []);
@@ -201,7 +201,7 @@ const SearchComponent: React.FC = () => {
 
 				source.addEventListener("ERROR", (event: any) => {
 					console.error("Error streaming summary:", event);
-          const object = JSON.parse(event.data);
+					const object = JSON.parse(event.data);
 					setSummary(
 						`An error occurred while fetching the summary\n${object.error}`,
 					);

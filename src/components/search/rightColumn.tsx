@@ -7,6 +7,7 @@ import type React from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { z } from "zod";
+import { FlatCard } from "../ui/flat-card";
 export const RightColumn: React.FC<{
 	data: z.infer<typeof searchDataResponseSchema>;
 	summary: string | null;
@@ -14,8 +15,8 @@ export const RightColumn: React.FC<{
 	isStreamingSummary: boolean;
 }> = ({ data, summary, queryHandler, isStreamingSummary }) => {
 	return (
-		<Card className="bg-card w-full shadow-lg border-primary/10 h-[min-content]">
-			<CardHeader className="bg-primary/5 border-b border-primary/10">
+		<FlatCard className="bg-card w-full shadow-lg border-primary/10 h-[min-content]">
+			<CardHeader className="bg-accent border-b border-primary/10 py-4">
 				<CardTitle className="flex items-center text-lg font-bold">
 					Insights
 				</CardTitle>
@@ -85,7 +86,7 @@ export const RightColumn: React.FC<{
 					</>
 				)}
 			</CardContent>
-		</Card>
+		</FlatCard>
 	);
 };
 
