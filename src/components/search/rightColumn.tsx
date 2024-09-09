@@ -40,7 +40,11 @@ export const RightColumn: React.FC<{
 						</Markdown>
 					</div>
 				) : (
-					<p className="text-sm text-neutral-400/70">Loading summary...</p>
+					<div className="flex flex-col gap-1">
+						{Array.from({ length: 5 }).map((_, urlIndex) => (
+							<Skeleton key={urlIndex} className="h-4 w-full" />
+						))}
+					</div>
 				)}
 				<Separator className="my-4 w-full" />
 				{data.infoboxes?.map((infobox, index) => (

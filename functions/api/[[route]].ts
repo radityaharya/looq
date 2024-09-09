@@ -25,7 +25,7 @@ const summarySchema = z.object({
 	query: z.string().optional(),
 	urls: z.array(z.string()).optional(),
 	content: z.string().optional(),
-  model: z.string().default("groq/llama-3.1-70b-versatile"),
+	model: z.string().optional(),
 });
 
 const searchResultSchema = z.object({
@@ -64,12 +64,12 @@ export const modelResponseSchema = z.object({
 	data: z.array(
 		z.object({
 			id: z.string(),
-			object: z.literal("object"),
+			object: z.string(),
 			created: z.number(),
 			owned_by: z.string(),
 		}),
 	),
-	object: z.literal("list"),
+	object: z.string(),
 });
 
 const autoCompleteResponseSchema = z.tuple([z.string(), z.array(z.string())]);
@@ -190,7 +190,7 @@ const fetchSummary = async ({
 
 	return streamSSE(context, async (stream) => {
 		const result = await streamText({
-			model: ai(data.model),
+			model: ai(data.model ?? "groq/llama-3.1-70b-versatile"),
 			prompt,
 			maxTokens: 500,
 		});
@@ -214,12 +214,12 @@ const fetchSummary = async ({
 
 const fetchModels = async (context: Context) => {
 	const { OPENAI_KEY, OPENAI_URL } = getEnv(context);
-	const models = await fetch(`${OPENAI_URL}/models`, {
+	const models = await fetch(`${OPENAI_URL}/v1/models`, {
 		headers: {
 			Authorization: `Bearer ${OPENAI_KEY}`,
 		},
 	});
-	const data = await modelResponseSchema.parse(models.json());
+	const data = await models.json();
 	return data;
 };
 
@@ -293,7 +293,7 @@ const app = new Hono<{ Bindings: Bindings }>()
 		});
 	})
 	.get("/models", async (c) => {
-		const data = await fetchModels(c);
+		const data = modelResponseSchema.parse(await fetchModels(c));
 		return c.json(data);
 	})
 	.get(

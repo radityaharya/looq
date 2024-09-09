@@ -13,8 +13,78 @@ import { RightColumn, RightColumnSkeleton } from "./rightColumn";
 import { SearchResults, SearchResultsSkeleton } from "./searchResults";
 import { SearchBar } from "./searchBar";
 import useLocalStorageState from "src/hooks/use-localstorage-state";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuGroup,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuPortal,
+	DropdownMenuSeparator,
+	DropdownMenuShortcut,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "../ui/button";
+import { Check, Cog, Settings } from "lucide-react";
 
-const Header = () => (
+const SettingsDropdown = ({
+	models,
+	selectedModel,
+	setSelectedModel,
+}: {
+	models: string[];
+	selectedModel: string;
+	setSelectedModel: (model: string) => void;
+}) => {
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<Button variant="outline">
+					<Settings size={20} />
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent className="w-48" side="left">
+				<DropdownMenuLabel>Model</DropdownMenuLabel>
+				<DropdownMenuGroup>
+					<DropdownMenuSub>
+						<DropdownMenuSubTrigger>
+							<span>Set Model</span>
+						</DropdownMenuSubTrigger>
+						<DropdownMenuPortal>
+							<DropdownMenuSubContent>
+								<ScrollArea className="h-72 w-48">
+									{models.map((model) => (
+										<DropdownMenuItem
+											key={model}
+											onClick={() => setSelectedModel(model)}
+											className={`hover:bg-accent ${selectedModel === model && "bg-accent"}`}
+										>
+											<span>{model}</span>
+										</DropdownMenuItem>
+									))}
+								</ScrollArea>
+							</DropdownMenuSubContent>
+						</DropdownMenuPortal>
+					</DropdownMenuSub>
+				</DropdownMenuGroup>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+};
+
+const Header = ({
+	models,
+	selectedModel,
+	setSelectedModel,
+}: {
+	models: string[];
+	selectedModel: string;
+	setSelectedModel: (model: string) => void;
+}) => (
 	<div className="w-full flex gap-2 items-center mb-8">
 		<div className="w-full">
 			<div className="flex flex-row gap-1 items-center">
@@ -25,6 +95,11 @@ const Header = () => (
 				powered by <span className="font-bold">SearXNG</span>
 			</p>
 		</div>
+		<SettingsDropdown
+			models={models}
+			selectedModel={selectedModel}
+			setSelectedModel={setSelectedModel}
+		/>
 	</div>
 );
 
@@ -73,27 +148,30 @@ const SearchComponent: React.FC = () => {
 	const [summary, setSummary] = useState<string | null>(null);
 	const [isManualLoading, setIsManualLoading] = useState(false);
 	const [isStreamingSummary, setStreamingSummary] = useState(false);
-  const [models, setModels] = useState<string[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>("");
+	const [models, setModels] = useState<string[]>([]);
 
 	const client = hc<AppType>("/");
 	const [searchHistory, setSearchHistory] = useLocalStorageState<string[]>(
 		"searchHistory",
 		[],
 	);
+	const [selectedModel, setSelectedModel] = useLocalStorageState<string>(
+		"selectedModel",
+		"groq/llama-3.1-70b-versatile",
+	);
 	const debouncedQuery = useDebouncedSearch(searchQuery, 1000);
 	const { autocompleteData, handleAutocomplete } = useAutocomplete(client);
 
-  // get models
-useEffect(() => {
-  const fetchModels = async () => {
-	const res = await client.api.models.$get();
-	const data = (await res.json());
-	setModels(data.data.map((model: any) => model.id));
-	setSelectedModel("groq/llama-3.1-70b-versatile");
-  };
-  fetchModels();
-}, [client.api.models.$get]);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+	useEffect(() => {
+		const fetchModels = async () => {
+			const res = await client.api.models.$get();
+			const data = await res.json();
+			setModels(data.data.map((model: any) => model.id));
+			setSelectedModel("groq/llama-3.1-70b-versatile");
+		};
+		fetchModels();
+	}, []);
 
 	const streamSummary = useCallback(
 		async (data: z.infer<typeof searchDataResponseSchema>) => {
@@ -103,6 +181,7 @@ useEffect(() => {
 				const payload = {
 					query: searchQuery,
 					urls: data.results.map((result) => result.url),
+					model: selectedModel,
 				};
 				const source = new SSE("/api/summary", {
 					headers: {
@@ -132,7 +211,7 @@ useEffect(() => {
 				console.error("Error initializing SSE:", error);
 			}
 		},
-		[searchQuery],
+		[searchQuery, selectedModel],
 	);
 
 	const {
@@ -187,7 +266,11 @@ useEffect(() => {
 	return (
 		<div className="min-h-screen text-foreground flex flex-col">
 			<main className="flex-grow flex flex-col items-start mx-4 sm:mx-24 py-12">
-				<Header />
+				<Header
+					models={models}
+					selectedModel={selectedModel}
+					setSelectedModel={setSelectedModel}
+				/>
 
 				<div className="flex flex-col sm:flex-row w-full">
 					<div
