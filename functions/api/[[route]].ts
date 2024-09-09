@@ -4,11 +4,7 @@ import { cache } from "hono/cache";
 import { handle } from "hono/cloudflare-pages";
 import { logger } from "hono/logger";
 import { getEnv } from "src/lib/env";
-import {
-	generateSummary,
-	getModels,
-	modelResponseSchema,
-} from "src/lib/ai";
+import { generateSummary, getModels, modelResponseSchema } from "src/lib/ai";
 import {
 	autocompleteSchema,
 	fetchAutocompleteResults,

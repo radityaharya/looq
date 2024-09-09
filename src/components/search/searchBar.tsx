@@ -43,7 +43,7 @@ export const SearchBar = ({
 	}, [searchQuery]);
 
 	return (
-		<div className="bg-card/50 relative w-full mb-8 rounded-none">
+		<div className="bg-card/50 relative w-full rounded-none">
 			<FlatCard>
 				<Command
 					shouldFilter={false}

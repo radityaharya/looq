@@ -14,18 +14,6 @@ import { SearchResults, SearchResultsSkeleton } from "./searchResults";
 import { SearchBar } from "./searchBar";
 import useLocalStorageState from "src/hooks/use-localstorage-state";
 import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuGroup,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuPortal,
-	DropdownMenuSub,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
 	Command,
 	CommandEmpty,
 	CommandGroup,
@@ -33,10 +21,21 @@ import {
 	CommandItem,
 	CommandList,
 } from "@/components/ui/command";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "../ui/button";
-import { Settings } from "lucide-react";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronsUpDown } from "lucide-react";
 
-const SettingsDropdown = ({
+const ModelsDropdown = ({
 	models,
 	selectedModel,
 	setSelectedModel,
@@ -45,59 +44,90 @@ const SettingsDropdown = ({
 	selectedModel: string;
 	setSelectedModel: (model: string) => void;
 }) => {
+	const [open, setOpen] = useState(false);
+
+	return (
+		<Popover open={open} onOpenChange={setOpen}>
+			<PopoverTrigger asChild>
+				<Button
+					variant="outline"
+					role="combobox"
+					aria-expanded={open}
+					size={"sm"}
+					className="w-56 justify-between border-2 border-primary/10 flex gap-1 text-xs"
+				>
+					<span className="truncate">{selectedModel.split("/")[1]}</span>
+					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+				</Button>
+			</PopoverTrigger>
+			<PopoverContent className="w-56 p-0">
+				<Command className="w-full">
+					<CommandInput placeholder="Search model..." />
+					<CommandList>
+						<CommandEmpty>No model found.</CommandEmpty>
+						<CommandGroup>
+							{models.map((model) => (
+								<CommandItem
+									key={model}
+									value={model}
+									onSelect={(currentValue) => {
+										setSelectedModel(currentValue);
+									}}
+								>
+									{model}
+								</CommandItem>
+							))}
+						</CommandGroup>
+					</CommandList>
+				</Command>
+			</PopoverContent>
+		</Popover>
+	);
+};
+
+const TimeRangeDropdown = ({
+	timeRange,
+	setTimeRange,
+}: {
+	timeRange: string;
+	setTimeRange: (timeRange: string) => void;
+}) => {
+	const timeRangeMap: { [key: string]: string } = {
+		"All time": "",
+		"Past 24 hours": "day",
+		"Past month": "month",
+		"Past year": "year",
+	};
+
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button variant="outline">
-					<Settings size={20} />
+				<Button
+					variant="outline"
+					role="combobox"
+					size={"sm"}
+					className="w-32 justify-between border-2 border-primary/10 flex gap-1 text-xs"
+				>
+					<span className="truncate font-base">
+						{Object.entries(timeRangeMap).find(
+							([_, value]) => value === timeRange,
+						)?.[0] || "All time"}
+					</span>
+					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent className="w-48" side="left">
-				<DropdownMenuLabel>Model</DropdownMenuLabel>
-				<DropdownMenuGroup>
-					<DropdownMenuSub>
-						<DropdownMenuSubTrigger>
-							<span>{selectedModel}</span>
-						</DropdownMenuSubTrigger>
-						<DropdownMenuPortal>
-							<DropdownMenuSubContent>
-								<Command className="w-48">
-									<CommandInput placeholder="Search model..." />
-									<CommandList>
-										<CommandEmpty>No model found.</CommandEmpty>
-										<CommandGroup>
-											{models.map((model) => (
-												<CommandItem
-													key={model}
-													value={model}
-													onSelect={(currentValue) => {
-														setSelectedModel(currentValue);
-													}}
-												>
-													{model}
-												</CommandItem>
-											))}
-										</CommandGroup>
-									</CommandList>
-								</Command>
-							</DropdownMenuSubContent>
-						</DropdownMenuPortal>
-					</DropdownMenuSub>
-				</DropdownMenuGroup>
+			<DropdownMenuContent className="w-32 p-0">
+				{Object.entries(timeRangeMap).map(([label, value]) => (
+					<DropdownMenuItem key={value} onSelect={() => setTimeRange(value)}>
+						{label}
+					</DropdownMenuItem>
+				))}
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);
 };
 
-const Header = ({
-	models,
-	selectedModel,
-	setSelectedModel,
-}: {
-	models: string[];
-	selectedModel: string;
-	setSelectedModel: (model: string) => void;
-}) => (
+const Header = () => (
 	<div className="w-full flex gap-2 items-center mb-8">
 		<div className="w-full">
 			<div className="flex flex-row gap-1 items-center">
@@ -108,11 +138,6 @@ const Header = ({
 				powered by <span className="font-bold">SearXNG</span>
 			</p>
 		</div>
-		<SettingsDropdown
-			models={models}
-			selectedModel={selectedModel}
-			setSelectedModel={setSelectedModel}
-		/>
 	</div>
 );
 
@@ -162,6 +187,7 @@ const SearchComponent: React.FC = () => {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const initialQuery = searchParams.get("q") || "";
 	const [searchQuery, setSearchQuery] = useState(initialQuery);
+	const [timeRange, setTimeRange] = useState("");
 	const [isFocused, setIsFocused] = useState(false);
 	const [summary, setSummary] = useState<TSummary | null>({
 		content: "",
@@ -235,7 +261,7 @@ const SearchComponent: React.FC = () => {
 				});
 
 				source.addEventListener("DONE", (event: any) => {
-          const data = JSON.parse(event.data);
+					const data = JSON.parse(event.data);
 					setSummary((prev) => {
 						if (prev) {
 							return {
@@ -267,7 +293,7 @@ const SearchComponent: React.FC = () => {
 		queryKey: ["search", debouncedQuery],
 		queryFn: async () => {
 			const res = await client.api.search.$get({
-				query: { q: debouncedQuery },
+				query: { q: debouncedQuery, time_range: timeRange },
 			});
 			if (res.status !== 200) {
 				throw new Error(`status_code ${res.status}`);
@@ -298,6 +324,17 @@ const SearchComponent: React.FC = () => {
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
+		const fetchData = async () => {
+			setIsManualLoading(true);
+			await refetch();
+			setIsManualLoading(false);
+		};
+
+		fetchData();
+	}, [timeRange]);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+	useEffect(() => {
 		if (searchData && searchData.results.length > 0) {
 			streamSummary(searchData);
 		}
@@ -318,12 +355,7 @@ const SearchComponent: React.FC = () => {
 	return (
 		<div className="min-h-screen text-foreground flex flex-col">
 			<main className="flex-grow flex flex-col items-start mx-4 sm:mx-24 py-12">
-				<Header
-					models={models}
-					selectedModel={selectedModel}
-					setSelectedModel={setSelectedModel}
-				/>
-
+				<Header />
 				<div className="flex flex-col sm:flex-row w-full">
 					<div
 						className={`w-full transition-all ${
@@ -351,6 +383,17 @@ const SearchComponent: React.FC = () => {
 							isFocused={isFocused}
 							setIsFocused={setIsFocused}
 						/>
+						<div className="flex flex-row mt-2 gap-2 mb-4">
+							<ModelsDropdown
+								models={models}
+								selectedModel={selectedModel}
+								setSelectedModel={setSelectedModel}
+							/>
+							<TimeRangeDropdown
+								timeRange={timeRange}
+								setTimeRange={setTimeRange}
+							/>
+						</div>
 						<div className="flex sm:hidden mb-4">
 							{isManualLoading ? (
 								<RightColumnSkeleton />
@@ -388,7 +431,7 @@ const SearchComponent: React.FC = () => {
 					</div>
 
 					<div
-						className={`transition-all ${
+						className={`transition-all hidden sm:flex ${
 							!searchData ||
 							searchQuery.length === 0 ||
 							isLoading ||
