@@ -325,13 +325,15 @@ const SearchComponent: React.FC = () => {
 	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
 		const fetchData = async () => {
-			setIsManualLoading(true);
-			await refetch();
-			setIsManualLoading(false);
+			if (debouncedQuery.length > 0) {
+				setIsManualLoading(true);
+				await refetch();
+				setIsManualLoading(false);
+			}
 		};
 
 		fetchData();
-	}, [timeRange]);
+	}, [timeRange, debouncedQuery]);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
@@ -377,8 +379,10 @@ const SearchComponent: React.FC = () => {
 									: { type: "history", data: searchHistory }
 							}
 							handleSearch={(query) => {
-								setSearchQuery(query);
-								refetch();
+								if (query.length > 0) {
+									setSearchQuery(query);
+									refetch();
+								}
 							}}
 							isFocused={isFocused}
 							setIsFocused={setIsFocused}
