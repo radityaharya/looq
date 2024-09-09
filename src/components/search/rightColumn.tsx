@@ -10,7 +10,10 @@ import type { z } from "zod";
 import { FlatCard } from "../ui/flat-card";
 export const RightColumn: React.FC<{
 	data: z.infer<typeof searchDataResponseSchema>;
-	summary: string | null;
+	summary: {
+		content: string;
+		sources: string[];
+	} | null;
 	queryHandler: (query: string) => void;
 	isStreamingSummary: boolean;
 }> = ({ data, summary, queryHandler, isStreamingSummary }) => {
@@ -37,8 +40,25 @@ export const RightColumn: React.FC<{
 								li: ({ children }) => <li className="mb-1">{children}</li>,
 							}}
 						>
-							{summary.replace(/\n/g, "\n\n")}
+							{summary.content}
 						</Markdown>
+						<div className="flex flex-wrap gap-2">
+							{summary.sources.map((source, index) => (
+								<a
+									key={source}
+									href={source}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-xs text-primary hover:underline"
+								>
+									{(() => {
+										const urlPattern = /^(https?:\/\/)?([^\/?#]+)(?:[\/?#]|$)/i;
+										const match = source.match(urlPattern);
+										return match ? match[2] : source;
+									})()}
+								</a>
+							))}
+						</div>
 					</div>
 				) : (
 					<div className="flex flex-col gap-1">

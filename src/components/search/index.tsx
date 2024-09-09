@@ -20,16 +20,21 @@ import {
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuPortal,
-	DropdownMenuSeparator,
-	DropdownMenuShortcut,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+} from "@/components/ui/command";
 import { Button } from "../ui/button";
-import { Check, Cog, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 
 const SettingsDropdown = ({
 	models,
@@ -56,17 +61,25 @@ const SettingsDropdown = ({
 						</DropdownMenuSubTrigger>
 						<DropdownMenuPortal>
 							<DropdownMenuSubContent>
-								<ScrollArea className="h-72 w-48">
-									{models.map((model) => (
-										<DropdownMenuItem
-											key={model}
-											onClick={() => setSelectedModel(model)}
-											className={`hover:bg-accent ${selectedModel === model && "bg-accent"}`}
-										>
-											<span>{model}</span>
-										</DropdownMenuItem>
-									))}
-								</ScrollArea>
+								<Command className="w-48">
+									<CommandInput placeholder="Search model..." />
+									<CommandList>
+										<CommandEmpty>No model found.</CommandEmpty>
+										<CommandGroup>
+											{models.map((model) => (
+												<CommandItem
+													key={model}
+													value={model}
+													onSelect={(currentValue) => {
+														setSelectedModel(currentValue);
+													}}
+												>
+													{model}
+												</CommandItem>
+											))}
+										</CommandGroup>
+									</CommandList>
+								</Command>
 							</DropdownMenuSubContent>
 						</DropdownMenuPortal>
 					</DropdownMenuSub>
@@ -140,12 +153,20 @@ const useAutocomplete = (client: any) => {
 	return { autocompleteData, handleAutocomplete };
 };
 
+type TSummary = {
+	content: string;
+	sources: string[];
+};
+
 const SearchComponent: React.FC = () => {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const initialQuery = searchParams.get("q") || "";
 	const [searchQuery, setSearchQuery] = useState(initialQuery);
 	const [isFocused, setIsFocused] = useState(false);
-	const [summary, setSummary] = useState<string | null>(null);
+	const [summary, setSummary] = useState<TSummary | null>({
+		content: "",
+		sources: [],
+	});
 	const [isManualLoading, setIsManualLoading] = useState(false);
 	const [isStreamingSummary, setStreamingSummary] = useState(false);
 	const [models, setModels] = useState<string[]>([]);
@@ -196,20 +217,34 @@ const SearchComponent: React.FC = () => {
 
 				source.addEventListener("ai-response", (event: any) => {
 					const data = JSON.parse(event.data);
-					setSummary(data.content);
+					setSummary({
+						content: data.content,
+						sources: [],
+					});
 				});
 
 				source.addEventListener("ERROR", (event: any) => {
 					console.error("Error streaming summary:", event);
 					const object = JSON.parse(event.data);
-					setSummary(
-						`An error occurred while fetching the summary\n${object.error}`,
-					);
+					setSummary({
+						content: `An error occurred while fetching the summary\n${object.error}`,
+						sources: [],
+					});
 					setStreamingSummary(false);
 					source.close();
 				});
 
-				source.addEventListener("DONE", () => {
+				source.addEventListener("DONE", (event: any) => {
+          const data = JSON.parse(event.data);
+					setSummary((prev) => {
+						if (prev) {
+							return {
+								...prev,
+								sources: data.sources,
+							};
+						}
+						return prev;
+					});
 					setStreamingSummary(false);
 					source.close();
 				});
@@ -239,7 +274,9 @@ const SearchComponent: React.FC = () => {
 			}
 			setSearchHistory((prev) => {
 				const newHistory = prev.filter((item) => item !== debouncedQuery);
-				newHistory.unshift(debouncedQuery);
+				if (!newHistory.includes(debouncedQuery)) {
+					newHistory.unshift(debouncedQuery);
+				}
 				return newHistory.slice(0, 5);
 			});
 			const data = (await res.json()) as z.infer<

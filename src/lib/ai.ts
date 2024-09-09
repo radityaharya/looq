@@ -58,14 +58,16 @@ export const generateSummary = async ({
 		baseURL: OPENAI_URL,
 	});
 
+	const contents = await fetchContent({ urls: data.urls ?? [] });
+	const slicedContents = contents.slice(0, 5);
 	let prompt =
 		"You are tasked to Make a summary based on user query to a search engine. Only return the content in markdown format without title or any other information. make it concise and digestable. refrain from advertising the result or making any call to actions. be Objective. Bold key points\n";
 	if (data.query) {
 		prompt += `The user query is: ${data.query}`;
 	}
 	if (data.urls) {
-		const content = await fetchContent({ urls: data.urls });
-		prompt += `The following are the content of the top search results: \n${content}`;
+		const combinedContent = slicedContents.map((c) => c.content).join("\n");
+		prompt += `The following are the content of the top search results: \n${combinedContent}`;
 	}
 	prompt +=
 		"\nif the content contains Chapta block or any errors, Ignore the content and use your own knowledge to generate the summary\n";
@@ -90,7 +92,10 @@ export const generateSummary = async ({
 			}
 
 			await stream.writeSSE({
-				data: JSON.stringify({ message: "DONE" }),
+				data: JSON.stringify({
+					message: "DONE",
+					sources: [...(slicedContents.map((c) => c.url) ?? [])],
+				}),
 				event: "DONE",
 			});
 		} catch (error: any) {
