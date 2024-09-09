@@ -147,8 +147,8 @@ const fetchAutocompleteResults = async ({
 	return autoCompleteResponseSchema.parse(data);
 };
 
-const fetchContent = async (urls: string[]): Promise<string> => {
-	const limitedUrls = urls.slice(0, 2);
+const fetchContent = async (urls: string[]): Promise<string[]> => {
+	const limitedUrls = urls.slice(0, 10);
 	const fetchPromises = limitedUrls.map(async (url) => {
 		const response = await fetch(`https://r.jina.ai/${url}`);
 		if (!response.ok) {
@@ -156,18 +156,45 @@ const fetchContent = async (urls: string[]): Promise<string> => {
 		}
 		return response.text();
 	});
-	const results = await Promise.all(fetchPromises);
-	return results.join("");
+	return await Promise.all(fetchPromises);
+};
+
+const rerankResults = async ({
+	JINA_KEY,
+	contents,
+	query,
+}: {
+	JINA_KEY: string;
+	contents: string[];
+	query: string;
+}): Promise<string[]> => {
+	const response = await fetch("https://api.jina.ai/v1/rerank", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${JINA_KEY}`,
+		},
+		body: JSON.stringify({
+			model: "jina-reranker-v2-base-multilingual",
+			query,
+			top_n: 3,
+			documents: contents,
+		}),
+	});
+	const data = await response.json();
+	return data.results.map((result: any) => result.document.text);
 };
 
 const fetchSummary = async ({
 	OPENAI_KEY,
 	OPENAI_URL,
+	JINA_KEY,
 	data,
 	context,
 }: {
 	OPENAI_KEY: string;
 	OPENAI_URL: string;
+	JINA_KEY: string;
 	data: z.infer<typeof summarySchema>;
 	context: Context;
 }): Promise<any> => {
@@ -183,7 +210,12 @@ const fetchSummary = async ({
 	}
 	if (data.urls) {
 		const content = await fetchContent(data.urls);
-		prompt += `The following are the content of the top search results: \n${content}`;
+		const rerankedContent = await rerankResults({
+			JINA_KEY,
+			contents: content,
+			query: data.query ?? "",
+		}).then((content) => content.join("\n\n"));
+		prompt += `The following are the content of the top search results: \n${rerankedContent}`;
 	}
 	prompt +=
 		"\nif the content contains Chapta block or any errors, Ignore the content and use your own knowledge to generate the summary\n";
@@ -229,6 +261,7 @@ type Bindings = {
 	CF_ACCESS_CLIENT_SECRET: string | undefined;
 	OPENAI_KEY: string;
 	OPENAI_URL: string;
+	JINA_KEY: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -283,11 +316,12 @@ const app = new Hono<{ Bindings: Bindings }>()
 		}
 	})
 	.post("/summary", async (c) => {
-		const { OPENAI_KEY, OPENAI_URL } = getEnv(c);
+		const { OPENAI_KEY, OPENAI_URL, JINA_KEY } = getEnv(c);
 		const data = await c.req.json();
 		return fetchSummary({
 			OPENAI_KEY,
 			OPENAI_URL,
+			JINA_KEY,
 			data,
 			context: c,
 		});

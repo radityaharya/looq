@@ -13,6 +13,7 @@ export const getEnv = (context: Context) => {
 		CF_ACCESS_CLIENT_SECRET: getEnvVariable("CF_ACCESS_CLIENT_SECRET"),
 		OPENAI_KEY: getEnvVariable("OPENAI_KEY"),
 		OPENAI_URL: getEnvVariable("OPENAI_URL"),
+    JINA_KEY: getEnvVariable("JINA_KEY"),
 	};
 
 	return values;
