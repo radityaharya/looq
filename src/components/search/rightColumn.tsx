@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { searchDataResponseSchema } from "functions/api/[[route]]";
+import type { searchDataResponseSchema } from "@/lib/search";
 import type React from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";

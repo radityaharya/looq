@@ -1,7 +1,7 @@
 import { debounce } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import type { AppType } from "functions/api/[[route]]";
-import type { searchDataResponseSchema } from "functions/api/[[route]]";
+import type { searchDataResponseSchema } from "@/lib/search";
 import { hc } from "hono/client";
 import type React from "react";
 import { useCallback, useEffect, useState, useMemo } from "react";
@@ -167,7 +167,11 @@ const SearchComponent: React.FC = () => {
 		const fetchModels = async () => {
 			const res = await client.api.models.$get();
 			const data = await res.json();
-			setModels(data.data.map((model: any) => model.id));
+			setModels(
+				data.data
+					.map((model: any) => model.id)
+					.sort((a: string, b: string) => b.localeCompare(a)),
+			);
 			setSelectedModel("groq/llama-3.1-70b-versatile");
 		};
 		fetchModels();
@@ -195,8 +199,12 @@ const SearchComponent: React.FC = () => {
 					setSummary(data.content);
 				});
 
-				source.addEventListener("error", (event: any) => {
+				source.addEventListener("ERROR", (event: any) => {
 					console.error("Error streaming summary:", event);
+          const object = JSON.parse(event.data);
+					setSummary(
+						`An error occurred while fetching the summary\n${object.error}`,
+					);
 					setStreamingSummary(false);
 					source.close();
 				});
@@ -250,6 +258,13 @@ const SearchComponent: React.FC = () => {
 			setIsManualLoading(true);
 		}
 	}, [isLoading]);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+	useEffect(() => {
+		if (searchData && searchData.results.length > 0) {
+			streamSummary(searchData);
+		}
+	}, [selectedModel]);
 
 	const handleType = useCallback(
 		(query: string) => {
