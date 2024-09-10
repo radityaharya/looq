@@ -1,6 +1,6 @@
 ## Looq
 
-This project is a SearXNG frontend built natively for Cloudflare Pages using [Hono](https://github.com/honojs/hono) and React with [shadcn/ui](https://ui.shadcn.com/)
+A SearXNG frontend built natively for Cloudflare Pages using [Hono](https://github.com/honojs/hono) and React with [shadcn/ui](https://ui.shadcn.com/)
 
 ![preview](preview.png)
 
