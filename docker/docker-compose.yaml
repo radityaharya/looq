@@ -17,6 +17,8 @@ services:
     # Uncomment the following lines to expose searxng on port 8080
     # ports:
     #   - "127.0.0.1:8080:8080"
+    env_file:
+      - .env
     volumes:
       - ./searxng:/etc/searxng:rw
     cap_drop:
