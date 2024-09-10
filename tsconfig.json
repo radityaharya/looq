@@ -1,33 +1,44 @@
 {
-	"compilerOptions": {
-		"module": "esnext",
-		"useDefineForClassFields": true,
-		"target": "ESNext",
-		"lib": ["esnext", "dom"],
-		"allowJs": true,
-		"moduleResolution": "node",
-		"strict": true,
-		"noImplicitAny": true,
-		"noImplicitReturns": true,
-		"noImplicitThis": true,
-		"strictNullChecks": true,
-		"strictFunctionTypes": true,
-		"skipLibCheck": true,
-		"preserveConstEnums": true,
-		"sourceMap": true,
-		"declaration": true,
-		"downlevelIteration": true,
-		"resolveJsonModule": true,
-		"allowSyntheticDefaultImports": true,
-		"experimentalDecorators": true,
-		"baseUrl": ".",
-		"rootDir": ".",
-		"jsx": "react-jsx",
-		"paths": {
-			"src/*": ["./src/*"],
-			"@/*": ["./src/*"],
-			"functions/*": ["./functions/*"]
-		}
-	},
-	"include": ["./src", "vite-env.d.ts"]
+  "compilerOptions": {
+    "target": "ES2021",
+    "useDefineForClassFields": true,
+    "lib": ["ES2021", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "outDir": "./build",
+
+    /* Linting */
+    "strict": true,
+
+    /* Original options */
+    "allowJs": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "preserveConstEnums": true,
+    "sourceMap": true,
+    "declaration": true,
+    "downlevelIteration": true,
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "baseUrl": ".",
+    "rootDir": ".",
+    "paths": {
+      "src/*": ["./src/*"],
+      "@/*": ["./src/*"],
+      "functions/*": ["./functions/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", "./src", "vite-env.d.ts"],
+  "exclude": ["node_modules/**"]
 }

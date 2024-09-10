@@ -21,7 +21,6 @@ type Bindings = {
 };
 
 const app = new Hono<{ Bindings: Bindings }>()
-	.basePath("/api")
 	.use(logger())
 	.get("/search", zValidator("query", searchSchema), async (c) => {
 		const query = c.req.valid("query");
@@ -122,13 +121,16 @@ const app = new Hono<{ Bindings: Bindings }>()
 			},
 		}),
 	);
-type AppType = typeof app;
 
-export const onRequest = handle(app);
+const api = new Hono().basePath("/api").route("/", app);
+type AppType = typeof api;
+
+export const onRequest = handle(api);
 
 export type { AppType };
 
+export { app };
 export default {
 	port: 3000,
-	fetch: app.fetch,
+	fetch: api.fetch,
 };

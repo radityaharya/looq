@@ -1,6 +1,7 @@
 name="looq"
 compatibility_date = "2024-09-03"
 pages_build_output_dir="./dist"
+compatibility_flags = [ "nodejs_compat_v2" ]
 
 
 # Automatically place your workloads in an optimal location to minimize latency.
