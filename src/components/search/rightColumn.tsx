@@ -128,8 +128,9 @@ export const RightColumnSkeleton: React.FC<{ count?: number }> = ({
 	count = 3,
 }) => {
 	return (
-		<Card className="bg-card w-full shadow-lg border-primary/10">
-			<CardHeader className="bg-primary/5 border-b border-primary/10">
+		<FlatCard className="bg-card w-full shadow-lg border-2 border-primary/10 h-[min-content]">
+			{" "}
+			<CardHeader className="bg-accent/40 border-b border-primary/10 py-4">
 				<CardTitle className="flex items-center text-lg font-bold">
 					Insights
 				</CardTitle>
@@ -148,6 +149,6 @@ export const RightColumnSkeleton: React.FC<{ count?: number }> = ({
 					))}
 				</div>
 			</CardContent>
-		</Card>
+		</FlatCard>
 	);
 };
