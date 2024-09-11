@@ -51,7 +51,6 @@
 		"@transmart/cli": "^0.5.1",
 		"@types/event-source-polyfill": "^1.0.5",
 		"ai": "^3.3.28",
-		"better-sqlite3": "^11.3.0",
 		"class-variance-authority": "^0.7.0",
 		"clsx": "^2.1.1",
 		"cmdk": "1.0.0",
