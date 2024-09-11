@@ -48,9 +48,9 @@ export const SearchBar = ({
 }) => {
 	const inputRef = useRef<HTMLInputElement>(null);
 
-	autocompleteData.data = autocompleteData.data.filter(
-		(suggestion) => suggestion !== "",
-	).slice(0, 5);
+	autocompleteData.data = autocompleteData.data
+		.filter((suggestion) => suggestion !== "")
+		.slice(0, 5);
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
@@ -90,8 +90,8 @@ export const SearchBar = ({
 						<div className="flex justify-between items-center px-3 py-2">
 							<span className="text-muted-foreground text-xs">
 								{autocompleteData.type === "autocomplete"
-                  ? "Suggestions"
-                  : "History"}
+									? "Suggestions"
+									: "History"}
 							</span>
 							{clearHistoryButton()}
 						</div>

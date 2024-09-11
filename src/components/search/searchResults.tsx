@@ -1,12 +1,4 @@
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
 import type React from "react";
 import type { searchDataResponseSchema } from "src/lib/search";
 import type { z } from "zod";

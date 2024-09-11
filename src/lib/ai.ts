@@ -77,7 +77,6 @@ export const generateSummary = async ({
 	const filteredQuery = pastQuery.filter(
 		(query) => query.summary?.model === data.model,
 	);
-
 	if (filteredQuery.length > 0 && filteredQuery[0].summary) {
 		return streamSSE(context, async (stream) => {
 			await stream.writeSSE({
@@ -113,12 +112,12 @@ export const generateSummary = async ({
 	if (searchData.results.length > 0) {
 		prompt += `The search results are: ${slicedResults.map((r) => r.content).join("\n\n")} \n\n`;
 	}
-	// if (urls) {
-	// 	const combinedContent = slicedContents
-	// 		.map((c) => `${c.content}\nURL: ${c.url}`)
-	// 		.join("\n");
-	// 	prompt += `The following are the content of the top search results: \n${combinedContent}`;
-	// }
+	if (urls) {
+		const combinedContent = slicedContents
+			.map((c) => `${c.content}\nURL: ${c.url}`)
+			.join("\n");
+		prompt += `The following are the content of the top search results: \n${combinedContent}`;
+	}
 	prompt +=
 		"\nif the content contains block or any errors, Ignore the content and use your own knowledge to generate the summary\n";
 

@@ -1,8 +1,8 @@
 import { debounce } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type { searchDataResponseSchema } from "@/lib/search";
-import type React from "react";
-import { useCallback, useEffect, useState, useMemo } from "react";
+import React from "react";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { SSE } from "sse.js";
 import type { z } from "zod";
@@ -31,8 +31,9 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronsUpDown } from "lucide-react";
+import { ArrowUp, ChevronsUpDown } from "lucide-react";
 import { client } from "src/api";
+import { Spinner } from "../ui/spinner";
 
 const ModelsDropdown = ({
 	models,
@@ -140,6 +141,43 @@ const Header = () => (
 	</div>
 );
 
+const ScrollToTopButton = () => {
+	const [isVisible, setIsVisible] = useState(false);
+
+	const handleScroll = () => {
+		if (window.scrollY > window.innerHeight) {
+			setIsVisible(true);
+		} else {
+			setIsVisible(false);
+		}
+	};
+
+	const handleClick = () => {
+		window.scrollTo({ top: 0, behavior: "smooth" });
+	};
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+	useEffect(() => {
+		window.addEventListener("scroll", handleScroll);
+		return () => {
+			window.removeEventListener("scroll", handleScroll);
+		};
+	}, []);
+
+	return (
+		isVisible && (
+			<Button
+				variant="outline"
+				size="sm"
+				className="fixed bottom-20 right-4"
+				onClick={handleClick}
+			>
+				<ArrowUp className="h-4 w-4" />
+			</Button>
+		)
+	);
+};
+
 const useDebouncedSearch = (searchQuery: string, delay: number) => {
 	const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
 
@@ -192,9 +230,7 @@ const SearchComponent: React.FC = () => {
 		content: "",
 		sources: [],
 	});
-	const [isManualLoading, setIsManualLoading] = useState(false);
 	const [isStreamingSummary, setStreamingSummary] = useState(false);
-
 	const [searchHistory, setSearchHistory] = useLocalStorageState<string[]>(
 		"searchHistory",
 		[],
@@ -205,29 +241,52 @@ const SearchComponent: React.FC = () => {
 	);
 	const debouncedQuery = useDebouncedSearch(searchQuery, 1000);
 	const { autocompleteData, handleAutocomplete } = useAutocomplete(client);
+	const bottomRef = useRef<HTMLDivElement>(null);
 
-	const { data: models } = useQuery({
-		queryKey: ["models", debouncedQuery],
+	const { data: models, isLoading: isModelsLoading } = useQuery({
+		queryKey: ["models"],
 		initialData: [],
 		queryFn: async () => {
 			const res = await client.api.models.$get();
 			if (res.status !== 200) {
 				throw new Error(`status_code ${res.status}`);
 			}
-			setSearchHistory((prev) => {
-				const newHistory = prev.filter((item) => item !== debouncedQuery);
-				if (!newHistory.includes(debouncedQuery)) {
-					newHistory.unshift(debouncedQuery);
-				}
-				return newHistory.slice(0, 5);
-			});
 			const responseData = await res.json();
-			const data = responseData.data
+			return responseData.data
 				.map((model: any) => model.id)
 				.sort((a: string, b: string) => a.localeCompare(b));
+		},
+		refetchOnWindowFocus: false,
+	});
 
+	const {
+		data: searchData,
+		fetchNextPage,
+		hasNextPage,
+		isFetchingNextPage,
+		isLoading: isSearchLoading,
+		refetch,
+		error,
+		...results
+	} = useInfiniteQuery({
+		queryKey: ["search", debouncedQuery, timeRange],
+		initialPageParam: "1",
+		queryFn: async ({ pageParam = "1" }) => {
+			const res = await client.api.search.$get({
+				query: {
+					q: debouncedQuery,
+					time_range: timeRange,
+					pageno: pageParam.toString(),
+				},
+			});
+			if (res.status !== 200) {
+				throw new Error(`status_code ${res.status}`);
+			}
+			const data = await res.json();
 			return data;
 		},
+		getNextPageParam: (lastPage) => String(Number(lastPage.pageno) + 1),
+		enabled: !!debouncedQuery && debouncedQuery.length > 0,
 		refetchOnWindowFocus: false,
 	});
 
@@ -289,64 +348,33 @@ const SearchComponent: React.FC = () => {
 		[selectedModel],
 	);
 
-	const {
-		data: searchData,
-		isLoading,
-		refetch,
-		error,
-		isSuccess,
-	} = useQuery({
-		queryKey: ["search", debouncedQuery],
-		queryFn: async () => {
-			const res = await client.api.search.$get({
-				query: { q: debouncedQuery, time_range: timeRange },
-			});
-			if (res.status !== 200) {
-				throw new Error(`status_code ${res.status}`);
-			}
-			setSearchHistory((prev) => {
-				const newHistory = prev.filter((item) => item !== debouncedQuery);
-				if (!newHistory.includes(debouncedQuery)) {
-					newHistory.unshift(debouncedQuery);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+	useEffect(() => {
+		if (searchData?.pages[0]) {
+			streamSummary(searchData.pages[0]);
+		}
+	}, [selectedModel, searchData?.pages[0], streamSummary]);
+
+	useEffect(() => {
+		setSearchParams({ q: searchQuery });
+	}, [searchQuery, setSearchParams]);
+
+	useEffect(() => {
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+					fetchNextPage();
 				}
-				return newHistory.slice(0, 5);
-			});
-			const data = (await res.json()) as z.infer<
-				typeof searchDataResponseSchema
-			>;
-			streamSummary(data);
-			setIsManualLoading(false);
-			return data;
-		},
-		enabled: !!debouncedQuery && debouncedQuery.length > 0,
-		refetchOnWindowFocus: false,
-	});
+			},
+			{ rootMargin: "200px" },
+		);
 
-	useEffect(() => {
-		if (isLoading) {
-			setIsManualLoading(true);
+		if (bottomRef.current) {
+			observer.observe(bottomRef.current);
 		}
-	}, [isLoading]);
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
-	useEffect(() => {
-		const fetchData = async () => {
-			if (debouncedQuery.length > 0) {
-				setIsManualLoading(true);
-				await refetch();
-				setIsManualLoading(false);
-			}
-		};
-
-		fetchData();
-	}, [timeRange, debouncedQuery]);
-
-	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
-	useEffect(() => {
-		if (searchData && searchData.results.length > 0) {
-			streamSummary(searchData);
-		}
-	}, [selectedModel]);
+		return () => observer.disconnect();
+	}, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
 	const handleType = useCallback(
 		(query: string) => {
@@ -356,21 +384,23 @@ const SearchComponent: React.FC = () => {
 		[handleAutocomplete],
 	);
 
-	useEffect(() => {
-		setSearchParams({ q: searchQuery });
-	}, [searchQuery, setSearchParams]);
-
 	return (
 		<div className="min-h-screen text-foreground flex flex-col">
 			<main className="flex-grow flex flex-col items-start mx-4 sm:mx-24 py-12">
 				<Header />
+				<ScrollToTopButton />
+				{isFetchingNextPage && (
+					<div className="fixed top-4 right-4">
+						<Spinner />
+					</div>
+				)}
 				<div className="flex flex-col sm:flex-row w-full">
 					<div
 						className={`w-full transition-all ${
 							searchQuery.length === 0 ||
-							isLoading ||
+							isSearchLoading ||
 							!searchData ||
-							searchData.results.length === 0
+							searchData.pages[0].results.length === 0
 								? "w-full"
 								: "sm:w-2/3 mr-8"
 						}`}
@@ -405,22 +435,26 @@ const SearchComponent: React.FC = () => {
 							/>
 						</div>
 						<div className="flex sm:hidden mb-4">
-							{isManualLoading ? (
+							{isSearchLoading ? (
 								<RightColumnSkeleton />
-							) : searchData && searchData.results.length > 0 ? (
+							) : searchData && searchData.pages[0].results.length > 0 ? (
 								<RightColumn
 									isStreamingSummary={isStreamingSummary}
-									data={searchData}
+									data={searchData.pages[0]}
 									summary={summary}
 									queryHandler={handleType}
 								/>
 							) : null}
 						</div>
 
-						{isManualLoading ? (
+						{isSearchLoading ? (
 							<SearchResultsSkeleton count={5} />
-						) : searchData && searchData.results.length > 0 ? (
-							<SearchResults searchData={searchData} />
+						) : searchData ? (
+							searchData.pages.map((page, i) => (
+								<React.Fragment key={i}>
+									<SearchResults searchData={page} />
+								</React.Fragment>
+							))
 						) : error ? (
 							<div className="h-full w-full">
 								<p className="font-bold text-sm text-neutral-400/70">
@@ -438,24 +472,25 @@ const SearchComponent: React.FC = () => {
 								No results found
 							</p>
 						)}
+						<div ref={bottomRef} />
 					</div>
 
 					<div
 						className={`transition-all hidden sm:flex ${
 							!searchData ||
 							searchQuery.length === 0 ||
-							isLoading ||
-							searchData.results.length === 0
+							isSearchLoading ||
+							searchData.pages[0].results.length === 0
 								? "w-0 opacity-0 invisible"
 								: "sm:w-1/3 opacity-100 visible"
 						}`}
 					>
-						{isManualLoading ? (
+						{isSearchLoading ? (
 							<RightColumnSkeleton />
-						) : searchData && searchData.results.length > 0 ? (
+						) : searchData && searchData.pages[0].results.length > 0 ? (
 							<RightColumn
 								isStreamingSummary={isStreamingSummary}
-								data={searchData}
+								data={searchData.pages[0]}
 								summary={summary}
 								queryHandler={handleType}
 							/>

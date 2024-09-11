@@ -12,6 +12,7 @@ export const searchSchema = z.object({
 	time_range: z.string().optional(),
 	safesearch: z.string().optional().default("0"),
 	categories: z.string().optional().default("general"),
+	pageno: z.string().optional().default("1"),
 });
 
 export const autocompleteSchema = z.object({
@@ -54,6 +55,7 @@ export const searchDataResponseSchema = z.object({
 		.optional(),
 	suggestions: z.array(z.string()),
 	requestId: z.string().optional(),
+	pageno: z.string(),
 });
 
 /**
@@ -79,13 +81,18 @@ export const fetchSearchResults = async ({
 	openAICredentials: OpenAICredentials;
 	context: Context & { env: Bindings };
 }): Promise<z.infer<typeof searchDataResponseSchema>> => {
-	const searchParams = new URLSearchParams(
-		query as { [key: string]: string },
-	).toString();
+	const { pageno, ...restQuery } = query;
+	const searchparams = {
+		pageno: pageno.toString(),
+		...restQuery,
+	};
+	const searchParams = new URLSearchParams(searchparams).toString();
 	const searchUrl = `${baseUrl}/search?${searchParams}&format=json`;
 
 	const response = await accessFetch(searchUrl, cfAccessCredentials);
-	const data = searchDataResponseSchema.parse(await response.json());
+	const json = (await response.json()) as any;
+	json.pageno = pageno;
+	const data = searchDataResponseSchema.parse(json);
 
 	if (data.suggestions.length < 2) {
 		const suggestedSearches = await generateSuggestedSearches({
