@@ -1,8 +1,6 @@
 import { debounce } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import type { AppType } from "functions/api/[[route]]";
 import type { searchDataResponseSchema } from "@/lib/search";
-import { hc } from "hono/client";
 import type React from "react";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -34,6 +32,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronsUpDown } from "lucide-react";
+import { client } from "src/api";
 
 const ModelsDropdown = ({
 	models,
@@ -197,7 +196,6 @@ const SearchComponent: React.FC = () => {
 	const [isStreamingSummary, setStreamingSummary] = useState(false);
 	const [models, setModels] = useState<string[]>([]);
 
-	const client = hc<AppType>("/");
 	const [searchHistory, setSearchHistory] = useLocalStorageState<string[]>(
 		"searchHistory",
 		[],
