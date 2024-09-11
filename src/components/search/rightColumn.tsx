@@ -47,7 +47,9 @@ export const RightColumn: React.FC<{
 									li: ({ children }) => <li className="mb-1">{children}</li>,
 								}}
 							>
-								{summary.content}
+								{Array.isArray(summary.content)
+									? summary.content.join("\n\n")
+									: summary.content}
 							</Markdown>
 							<div className="flex flex-wrap gap-2 mt-2">
 								{summary.sources.map((source, index) => (

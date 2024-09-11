@@ -18,6 +18,7 @@ export const rerankerResponseSchema = z.object({
 		}),
 	),
 });
+
 export const rerankResults = async ({
 	JINA_KEY,
 	contents,
@@ -54,23 +55,39 @@ export const rerankResults = async ({
 	}
 };
 
-const fetchContentJina = async ({
+/**
+ * Fetches the content from a single URL.
+ *
+ * @param url - The URL to fetch the content from.
+ * @returns A promise that resolves to the fetched content as a string.
+ */
+export const fetchJinaContent = async (url: string): Promise<string | null> => {
+	try {
+		const response = await fetch(`https://r.jina.ai/${url}`);
+		if (!response.ok) {
+			throw new Error(`Fetch failed with status: ${response.status}`);
+		}
+		return response.text();
+	} catch (error) {
+		console.error(`Error fetching URL ${url}:`, error);
+		return null;
+	}
+};
+
+/**
+ * Fetches Jina contents from the given URLs.
+ *
+ * @param {Object} options - The options for fetching Jina contents.
+ * @param {string[]} options.urls - The URLs to fetch Jina contents from.
+ * @param {string} options.JINA_KEY - The Jina key.
+ * @returns {Promise<any[]>} - A promise that resolves to an array of fetched Jina contents.
+ */
+export const fetchJinaContents = async ({
 	urls,
 	JINA_KEY,
 }: { urls: string[]; JINA_KEY: string }) => {
 	const limitedUrls = urls.slice(0, 10);
-	const fetchPromises = limitedUrls.map(async (url) => {
-		try {
-			const response = await fetch(`https://r.jina.ai/${url}`);
-			if (!response.ok) {
-				throw new Error(`Fetch failed with status: ${response.status}`);
-			}
-			return response.text();
-		} catch (error) {
-			console.error(`Error fetching URL ${url}:`, error);
-			return null;
-		}
-	});
+	const fetchPromises = limitedUrls.map((url) => fetchJinaContent(url));
 	const results = await Promise.all(fetchPromises);
 	return results.filter((result) => result !== null);
 };

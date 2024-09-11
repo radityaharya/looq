@@ -9,6 +9,8 @@ const EnvSchema = z.object({
 	OPENAI_KEY: z.string(),
 	OPENAI_URL: z.string(),
 	JINA_KEY: z.string().optional(),
+	DATABASE_URL: z.string(),
+	DATABASE_AUTH_TOKEN: z.string(),
 });
 
 type Env = z.infer<typeof EnvSchema>;

@@ -228,8 +228,7 @@ const SearchComponent: React.FC = () => {
 			setStreamingSummary(true);
 			try {
 				const payload = {
-					query: searchQuery,
-					urls: data.results.map((result) => result.url),
+					requestId: data.requestId,
 					model: selectedModel,
 				};
 				const source = new SSE("/api/summary", {
@@ -278,7 +277,7 @@ const SearchComponent: React.FC = () => {
 				console.error("Error initializing SSE:", error);
 			}
 		},
-		[searchQuery, selectedModel],
+		[selectedModel],
 	);
 
 	const {

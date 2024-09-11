@@ -11,13 +11,15 @@ import {
 	searchSchema,
 } from "src/lib/search";
 import { hc } from "hono/client";
+import { z } from "zod";
 
-type Bindings = {
+export type Bindings = {
 	SEARXNG_URL: string;
 	CF_ACCESS_CLIENT_ID: string | undefined;
 	CF_ACCESS_CLIENT_SECRET: string | undefined;
 	OPENAI_KEY: string;
 	OPENAI_URL: string;
+	DB: D1Database;
 };
 
 export const app = new Hono<{ Bindings: Bindings }>()
@@ -35,6 +37,7 @@ export const app = new Hono<{ Bindings: Bindings }>()
 			const fetchOptions: any = {
 				query,
 				baseUrl: SEARXNG_URL,
+				context: c,
 				openAICredentials: {
 					OPENAI_KEY: OPENAI_KEY,
 					OPENAI_URL: OPENAI_URL,
@@ -49,6 +52,7 @@ export const app = new Hono<{ Bindings: Bindings }>()
 			}
 
 			const data = await fetchSearchResults(fetchOptions);
+			c.header("X-Request-Id", data.requestId);
 			return c.json(data);
 		} catch (e: any) {
 			console.error(e);
@@ -79,16 +83,20 @@ export const app = new Hono<{ Bindings: Bindings }>()
 			return c.json({ error: e.message }, 500);
 		}
 	})
-	.post("/summary", async (c) => {
-		const { OPENAI_KEY, OPENAI_URL } = getEnv(c);
-		const data = await c.req.json();
-		return generateSummary({
-			OPENAI_KEY,
-			OPENAI_URL,
-			data,
-			context: c,
-		});
-	})
+	.post(
+		"/summary",
+		zValidator("json", z.object({ model: z.string(), requestId: z.string() })),
+		async (c) => {
+			const { OPENAI_KEY, OPENAI_URL } = getEnv(c);
+			const data = await c.req.json();
+			return generateSummary({
+				OPENAI_KEY,
+				OPENAI_URL,
+				data,
+				context: c,
+			});
+		},
+	)
 	.get("/models", async (c) => {
 		const data = modelResponseSchema.parse(await getModels(c));
 		return c.json(data);

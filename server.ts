@@ -31,7 +31,7 @@ console.log({ env: Object.keys(env) });
 const hono = new Hono()
 	.use("/assets/*", serveStatic({ root: isProd ? "dist/" : "./" }))
 	.route("/api", app)
-	.get("/*", (c) => c.html(html))
+	.get("/*", (c) => c.html(html));
 
 export default hono;
 

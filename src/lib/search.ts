@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { generateSuggestedSearches, type OpenAICredentials } from "./ai";
 import { accessFetch, type CFAccessCredentials } from "./access";
-
+import { getDatabaseConnection } from "src/db/db";
+import type { Bindings } from "src/api";
+import type { Context } from "hono";
+import { search } from "src/db/schema";
+import { nanoid } from "nanoid";
 export const searchSchema = z.object({
 	q: z.string(),
 	language: z.string().optional().default("en-US"),
@@ -37,8 +41,8 @@ export const searchDataResponseSchema = z.object({
 	infoboxes: z
 		.array(
 			z.object({
-				infobox: z.string(),
-				content: z.string().optional(),
+				infobox: z.string().optional(),
+				content: z.union([z.string(), z.array(z.string())]).optional(),
 				urls: z.array(
 					z.object({
 						title: z.string(),
@@ -49,6 +53,7 @@ export const searchDataResponseSchema = z.object({
 		)
 		.optional(),
 	suggestions: z.array(z.string()),
+	requestId: z.string().optional(),
 });
 
 /**
@@ -66,11 +71,13 @@ export const fetchSearchResults = async ({
 	baseUrl,
 	cfAccessCredentials,
 	openAICredentials,
+	context,
 }: {
 	query: z.infer<typeof searchSchema>;
 	baseUrl: string;
 	cfAccessCredentials: CFAccessCredentials;
 	openAICredentials: OpenAICredentials;
+	context: Context & { env: Bindings };
 }): Promise<z.infer<typeof searchDataResponseSchema>> => {
 	const searchParams = new URLSearchParams(
 		query as { [key: string]: string },
@@ -92,6 +99,19 @@ export const fetchSearchResults = async ({
 		data.suggestions = suggestedSearches.suggestions;
 	}
 
+	const db = await getDatabaseConnection(context);
+	const [insertedSearch] = await db
+		.insert(search)
+		.values({
+			id: nanoid(),
+			query: query.q,
+			results: data.results,
+			created: Math.floor(Date.now() / 1000),
+			infoBoxes: data.infoboxes,
+		})
+		.returning();
+
+	data.requestId = insertedSearch.id;
 	return data;
 };
 
