@@ -9,6 +9,25 @@ import { HistoryIcon, SearchIcon } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef } from "react";
 import { FlatCard } from "../ui/flat-card";
+import { Button } from "../ui/button";
+import useLocalStorageState from "src/hooks/use-localstorage-state";
+
+// delete search history from local storage
+const clearHistoryButton = () => {
+	const [searchHistory, setSearchHistory] = useLocalStorageState<string[]>(
+		"searchHistory",
+		[],
+	);
+	const clearHistory = () => {
+		setSearchHistory([]);
+	};
+
+	return (
+		<Button onClick={clearHistory} size={"sm"} variant={"outline"} className="">
+			Clear
+		</Button>
+	);
+};
 
 export const SearchBar = ({
 	searchQuery,
@@ -28,6 +47,10 @@ export const SearchBar = ({
 	setIsFocused: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
 	const inputRef = useRef<HTMLInputElement>(null);
+
+	autocompleteData.data = autocompleteData.data.filter(
+		(suggestion) => suggestion !== "",
+	).slice(0, 5);
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
@@ -64,28 +87,28 @@ export const SearchBar = ({
 						}}
 					/>
 					<CommandList>
-						<CommandGroup
-							heading={
-								autocompleteData.type === "autocomplete"
-									? "Suggestions"
-									: "History"
-							}
-						>
-							{autocompleteData?.data.map((suggestion) => (
-								<CommandItem
-									key={suggestion}
-									onSelect={() => setSearchQuery(suggestion)}
-									onClick={() => handleSearch(suggestion)}
-								>
-									{autocompleteData.type === "autocomplete" ? (
-										<SearchIcon className="mr-2 h-4 w-4" />
-									) : (
-										<HistoryIcon className="mr-2 h-4 w-4" />
-									)}
-									<span>{suggestion}</span>
-								</CommandItem>
-							))}
-						</CommandGroup>
+						<div className="flex justify-between items-center px-3 py-2">
+							<span className="text-muted-foreground text-xs">
+								{autocompleteData.type === "autocomplete"
+                  ? "Suggestions"
+                  : "History"}
+							</span>
+							{clearHistoryButton()}
+						</div>
+						{autocompleteData?.data.map((suggestion) => (
+							<CommandItem
+								key={suggestion}
+								onSelect={() => setSearchQuery(suggestion)}
+								onClick={() => handleSearch(suggestion)}
+							>
+								{autocompleteData.type === "autocomplete" ? (
+									<SearchIcon className="mr-2 h-4 w-4" />
+								) : (
+									<HistoryIcon className="mr-2 h-4 w-4" />
+								)}
+								<span>{suggestion}</span>
+							</CommandItem>
+						))}
 					</CommandList>
 				</Command>
 			</FlatCard>

@@ -46,6 +46,8 @@ export async function fetchContent({
 	urls: string[];
 	timeout?: number;
 }): Promise<{ url: string; content: string }[]> {
+	urls = urls.slice(0, 5);
+
 	const fetchPromises = urls.map(async (url) => {
 		const content = await fetchJinaContent(url);
 		if (content === null) {

@@ -100,27 +100,25 @@ export const generateSummary = async ({
 
 	const contents = await fetchContent({ urls: urls ?? [] });
 	const slicedContents = contents.slice(0, 5);
+	const slicedResults = searchData.results.slice(0, 10);
+	const slicedInfoBoxes = searchData.infoBoxes?.slice(0, 5);
 	let prompt =
 		"You are tasked to Make a summary based on user query to a search engine. Only return the content in markdown format without title or any other information. make it concise and digestable. refrain from advertising the result or making any call to actions. be Objective. Bold key points. Use Links\n";
 	if (searchData.query) {
 		prompt += `The user query is: ${searchData.query}`;
 	}
 	if (searchData.infoBoxes && searchData.infoBoxes.length > 0) {
-		prompt += `Here are some infobox from the search engines: ${searchData.infoBoxes?.map((i) => i.infobox).join(", ")} \n\n`;
+		prompt += `Here are some infobox from the search engines: ${slicedInfoBoxes?.map((i) => i.infobox?.substring(0, 100)).join(", ")} \n\n`;
 	}
 	if (searchData.results.length > 0) {
-		prompt +=
-			`The search results are: ${searchData.results.map((r) => r.content).join("\n\n")} \n\n`.substring(
-				0,
-				1000,
-			);
+		prompt += `The search results are: ${slicedResults.map((r) => r.content).join("\n\n")} \n\n`;
 	}
-	if (urls) {
-		const combinedContent = slicedContents
-			.map((c) => `${c.content}\nURL: ${c.url}`)
-			.join("\n");
-		prompt += `The following are the content of the top search results: \n${combinedContent}`;
-	}
+	// if (urls) {
+	// 	const combinedContent = slicedContents
+	// 		.map((c) => `${c.content}\nURL: ${c.url}`)
+	// 		.join("\n");
+	// 	prompt += `The following are the content of the top search results: \n${combinedContent}`;
+	// }
 	prompt +=
 		"\nif the content contains block or any errors, Ignore the content and use your own knowledge to generate the summary\n";
 
@@ -223,6 +221,6 @@ export const getModels = async (context: Context) => {
 			Authorization: `Bearer ${OPENAI_KEY}`,
 		},
 	});
-	const data = await models.json();
+	const data = modelResponseSchema.parse(await models.json());
 	return data;
 };

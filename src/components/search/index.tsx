@@ -194,7 +194,6 @@ const SearchComponent: React.FC = () => {
 	});
 	const [isManualLoading, setIsManualLoading] = useState(false);
 	const [isStreamingSummary, setStreamingSummary] = useState(false);
-	const [models, setModels] = useState<string[]>([]);
 
 	const [searchHistory, setSearchHistory] = useLocalStorageState<string[]>(
 		"searchHistory",
@@ -207,20 +206,30 @@ const SearchComponent: React.FC = () => {
 	const debouncedQuery = useDebouncedSearch(searchQuery, 1000);
 	const { autocompleteData, handleAutocomplete } = useAutocomplete(client);
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
-	useEffect(() => {
-		const fetchModels = async () => {
+	const { data: models } = useQuery({
+		queryKey: ["models", debouncedQuery],
+		initialData: [],
+		queryFn: async () => {
 			const res = await client.api.models.$get();
-			const data = await res.json();
-			setModels(
-				data.data
-					.map((model: any) => model.id)
-					.sort((a: string, b: string) => b.localeCompare(a)),
-			);
-			setSelectedModel(selectedModel);
-		};
-		fetchModels();
-	}, []);
+			if (res.status !== 200) {
+				throw new Error(`status_code ${res.status}`);
+			}
+			setSearchHistory((prev) => {
+				const newHistory = prev.filter((item) => item !== debouncedQuery);
+				if (!newHistory.includes(debouncedQuery)) {
+					newHistory.unshift(debouncedQuery);
+				}
+				return newHistory.slice(0, 5);
+			});
+			const responseData = await res.json();
+			const data = responseData.data
+				.map((model: any) => model.id)
+				.sort((a: string, b: string) => a.localeCompare(b));
+
+			return data;
+		},
+		refetchOnWindowFocus: false,
+	});
 
 	const streamSummary = useCallback(
 		async (data: z.infer<typeof searchDataResponseSchema>) => {
