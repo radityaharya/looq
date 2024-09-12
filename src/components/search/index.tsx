@@ -1,5 +1,8 @@
 import { debounce } from "@/lib/utils";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+	useInfiniteQuery,
+	useQuery,
+} from "@tanstack/react-query";
 import type { searchDataResponseSchema } from "@/lib/search";
 import React from "react";
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
@@ -267,7 +270,6 @@ const SearchComponent: React.FC = () => {
 		isLoading: isSearchLoading,
 		refetch,
 		error,
-		...results
 	} = useInfiniteQuery({
 		queryKey: ["search", debouncedQuery, timeRange],
 		initialPageParam: "1",
@@ -283,6 +285,11 @@ const SearchComponent: React.FC = () => {
 				throw new Error(`status_code ${res.status}`);
 			}
 			const data = await res.json();
+			setSearchHistory((prev) => {
+				const newHistory = prev.filter((item) => item !== debouncedQuery);
+				newHistory.unshift(debouncedQuery);
+				return newHistory.slice(0, 5);
+			});
 			return data;
 		},
 		getNextPageParam: (lastPage) => String(Number(lastPage.pageno) + 1),

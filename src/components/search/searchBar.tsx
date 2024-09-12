@@ -11,6 +11,7 @@ import { useEffect, useRef } from "react";
 import { FlatCard } from "../ui/flat-card";
 import { Button } from "../ui/button";
 import useLocalStorageState from "src/hooks/use-localstorage-state";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // delete search history from local storage
 const clearHistoryButton = () => {
@@ -115,3 +116,15 @@ export const SearchBar = ({
 		</div>
 	);
 };
+
+export const SearchBarSkeleton: React.FC = () => {
+	return (
+		<div className="bg-card/50 relative w-full rounded-none">
+			<FlatCard>
+				<Skeleton className="h-12 w-full rounded-none" />
+			</FlatCard>
+		</div>
+	);
+};
+
+export default SearchBar;

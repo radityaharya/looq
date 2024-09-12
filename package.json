@@ -84,7 +84,7 @@
 		"tailwind-merge": "^2.5.2",
 		"tailwindcss-animate": "^1.0.7",
 		"terser": "^5.31.6",
-		"turndown": "^7.2.0",
+		"vite-plugin-compression": "^0.5.1",
 		"wrangler": "^3.76.0",
 		"zod": "^3.23.8"
 	},

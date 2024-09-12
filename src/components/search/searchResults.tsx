@@ -48,3 +48,5 @@ export const SearchResultsSkeleton: React.FC<{ count?: number }> = ({
 		</>
 	);
 };
+
+export default SearchResults;

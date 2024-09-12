@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { searchDataResponseSchema } from "@/lib/search";
@@ -9,6 +9,13 @@ import remarkGfm from "remark-gfm";
 import type { z } from "zod";
 import { FlatCard } from "../ui/flat-card";
 import { ShineBorder } from "../ui/shine-border";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 export const RightColumn: React.FC<{
 	data: z.infer<typeof searchDataResponseSchema>;
 	summary: {
@@ -45,6 +52,37 @@ export const RightColumn: React.FC<{
 										<ol className="list-decimal pl-4 mb-2">{children}</ol>
 									),
 									li: ({ children }) => <li className="mb-1">{children}</li>,
+									a: ({ children, href }) => (
+										<a
+											href={href}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="text-primary underline truncate overflow-hidden whitespace-nowrap break-words"
+										>
+											<TooltipProvider>
+												<Tooltip>
+													<TooltipTrigger>
+														<Badge
+															variant="secondary"
+															className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors text-[10px] py-0"
+														>
+															{(() => {
+																const urlPattern =
+																	/^(https?:\/\/)?([^\/?#]+)(?:[\/?#]|$)/i;
+																const match = (href as string).match(
+																	urlPattern,
+																);
+																return match ? match[2] : href;
+															})()}
+														</Badge>
+													</TooltipTrigger>
+													<TooltipContent>
+														<span className="text-xs">{href}</span>
+													</TooltipContent>
+												</Tooltip>
+											</TooltipProvider>
+										</a>
+									),
 								}}
 							>
 								{Array.isArray(summary.content)
@@ -154,3 +192,6 @@ export const RightColumnSkeleton: React.FC<{ count?: number }> = ({
 		</FlatCard>
 	);
 };
+
+
+export default RightColumn;
