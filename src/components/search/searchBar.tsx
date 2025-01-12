@@ -5,7 +5,7 @@ import {
 	CommandItem,
 	CommandList,
 } from "@/components/ui/command";
-import { HistoryIcon, SearchIcon } from "lucide-react";
+import { HistoryIcon, SearchIcon, Search } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef } from "react";
 import { FlatCard } from "../ui/flat-card";
@@ -68,25 +68,38 @@ export const SearchBar = ({
 
 	return (
 		<div className="bg-card/50 relative w-full rounded-none">
-			<FlatCard>
+			<FlatCard className="w-full">
 				<Command
 					shouldFilter={false}
-					className="border border-primary/10 rounded-none"
+					className="border border-primary/10 rounded-none w-full"
 				>
-					<CommandInput
-						ref={inputRef}
-						placeholder="Search..."
-						className="rounded-none"
-						value={searchQuery}
-						onValueChange={(query) => handleType(query)}
-						onFocus={() => setIsFocused(true)}
-						onBlur={() => setIsFocused(false)}
-						onKeyUp={(e) => {
-							if (isFocused && e.key === "Enter" && searchQuery.length > 0) {
-								handleSearch(searchQuery);
-							}
-						}}
-					/>
+					<div className="flex w-full">
+						<CommandInput
+							ref={inputRef}
+							placeholder="Search..."
+							className="rounded-none flex-1"
+							value={searchQuery}
+							onValueChange={(query) => handleType(query)}
+							onFocus={() => setIsFocused(true)}
+							onBlur={() => setIsFocused(false)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" && !e.shiftKey) {
+									e.preventDefault();
+									if (searchQuery.length > 0) {
+										handleSearch(searchQuery);
+									}
+								}
+							}}
+						/>
+						<Button 
+							variant="ghost"
+							size="icon"
+							onClick={() => handleSearch(searchQuery)}
+							className="mr-2"
+						>
+							<Search className="h-4 w-4" />
+						</Button>
+					</div>
 					<CommandList>
 						<div className="flex justify-between items-center px-3 py-2">
 							<span className="text-muted-foreground text-xs">
@@ -99,8 +112,10 @@ export const SearchBar = ({
 						{autocompleteData?.data.map((suggestion) => (
 							<CommandItem
 								key={suggestion}
-								onSelect={() => setSearchQuery(suggestion)}
-								onClick={() => handleSearch(suggestion)}
+								value={suggestion}
+								onSelect={() => {
+									setSearchQuery(suggestion);
+								}}
 							>
 								{autocompleteData.type === "autocomplete" ? (
 									<SearchIcon className="mr-2 h-4 w-4" />

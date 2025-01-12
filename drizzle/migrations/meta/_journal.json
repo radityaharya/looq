@@ -1,1 +1,20 @@
-{ "version": "7", "dialect": "sqlite", "entries": [] }
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1736697563999,
+      "tag": "0000_careful_king_cobra",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1736697676868,
+      "tag": "0001_living_absorbing_man",
+      "breakpoints": true
+    }
+  ]
+}

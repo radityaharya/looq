@@ -1,4 +1,3 @@
-import { debounce } from "@/lib/utils";
 import {
 	useInfiniteQuery,
 	useQuery,
@@ -37,6 +36,7 @@ import {
 import { ArrowUp, ChevronsUpDown } from "lucide-react";
 import { client } from "src/api";
 import { Spinner } from "../ui/spinner";
+import { debounce } from "src/lib/utils";
 
 const ModelsDropdown = ({
 	models,
@@ -181,21 +181,6 @@ const ScrollToTopButton = () => {
 	);
 };
 
-const useDebouncedSearch = (searchQuery: string, delay: number) => {
-	const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
-
-	const debouncedSearch = useMemo(
-		() => debounce((query) => setDebouncedQuery(query), delay),
-		[delay],
-	);
-
-	useEffect(() => {
-		debouncedSearch(searchQuery);
-	}, [searchQuery, debouncedSearch]);
-
-	return debouncedQuery;
-};
-
 const useAutocomplete = (client: any) => {
 	const [autocompleteData, setAutocompleteData] = useState<string[]>([]);
 
@@ -242,7 +227,6 @@ const SearchComponent: React.FC = () => {
 		"selectedModel",
 		"groq/llama-3.1-70b-versatile",
 	);
-	const debouncedQuery = useDebouncedSearch(searchQuery, 1000);
 	const { autocompleteData, handleAutocomplete } = useAutocomplete(client);
 	const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -271,12 +255,12 @@ const SearchComponent: React.FC = () => {
 		refetch,
 		error,
 	} = useInfiniteQuery({
-		queryKey: ["search", debouncedQuery, timeRange],
+		queryKey: ["search", searchQuery, timeRange],
 		initialPageParam: "1",
 		queryFn: async ({ pageParam = "1" }) => {
 			const res = await client.api.search.$get({
 				query: {
-					q: debouncedQuery,
+					q: searchQuery,
 					time_range: timeRange,
 					pageno: pageParam.toString(),
 				},
@@ -286,14 +270,14 @@ const SearchComponent: React.FC = () => {
 			}
 			const data = await res.json();
 			setSearchHistory((prev) => {
-				const newHistory = prev.filter((item) => item !== debouncedQuery);
-				newHistory.unshift(debouncedQuery);
+				const newHistory = prev.filter((item) => item !== searchQuery);
+				newHistory.unshift(searchQuery);
 				return newHistory.slice(0, 5);
 			});
 			return data;
 		},
 		getNextPageParam: (lastPage) => String(Number(lastPage.pageno) + 1),
-		enabled: !!debouncedQuery && debouncedQuery.length > 0,
+		enabled: false,
 		refetchOnWindowFocus: false,
 	});
 
@@ -391,6 +375,18 @@ const SearchComponent: React.FC = () => {
 		[handleAutocomplete],
 	);
 
+	const handleSearch = useCallback(() => {
+		if (searchQuery.trim()) {
+			refetch();
+		}
+	}, [searchQuery, refetch]);
+
+	useEffect(() => {
+		if (initialQuery) {
+			refetch();
+		}
+	}, []);
+
 	return (
 		<div className="min-h-screen text-foreground flex flex-col">
 			<main className="flex-grow flex flex-col items-start mx-4 sm:mx-24 py-12">
@@ -421,12 +417,7 @@ const SearchComponent: React.FC = () => {
 									? { type: "autocomplete", data: autocompleteData }
 									: { type: "history", data: searchHistory }
 							}
-							handleSearch={(query) => {
-								if (query.length > 0) {
-									setSearchQuery(query);
-									refetch();
-								}
-							}}
+							handleSearch={handleSearch}
 							isFocused={isFocused}
 							setIsFocused={setIsFocused}
 						/>
@@ -450,6 +441,8 @@ const SearchComponent: React.FC = () => {
 									data={searchData.pages[0]}
 									summary={summary}
 									queryHandler={handleType}
+									requestId={searchData.pages[0].requestId ?? ""}
+									selectedModel={selectedModel}
 								/>
 							) : null}
 						</div>
@@ -500,6 +493,8 @@ const SearchComponent: React.FC = () => {
 								data={searchData.pages[0]}
 								summary={summary}
 								queryHandler={handleType}
+								requestId={searchData.pages[0].requestId ?? ""}
+								selectedModel={selectedModel}
 							/>
 						) : null}
 					</div>

@@ -1,0 +1,1 @@
+ALTER TABLE "search" ADD COLUMN "chat" json;

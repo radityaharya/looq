@@ -15,8 +15,9 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Chat } from "./chat";
 
-export const RightColumn: React.FC<{
+type Props = {
 	data: z.infer<typeof searchDataResponseSchema>;
 	summary: {
 		content: string;
@@ -24,7 +25,18 @@ export const RightColumn: React.FC<{
 	} | null;
 	queryHandler: (query: string) => void;
 	isStreamingSummary: boolean;
-}> = ({ data, summary, queryHandler, isStreamingSummary }) => {
+	requestId: string;
+	selectedModel: string;
+};
+
+export const RightColumn: React.FC<Props> = ({
+	data,
+	summary,
+	queryHandler,
+	isStreamingSummary,
+	requestId,
+	selectedModel,
+}) => {
 	return (
 		<FlatCard className="bg-card w-full shadow-lg border-2 border-primary/10 h-[min-content]">
 			<ShineBorder
@@ -156,6 +168,13 @@ export const RightColumn: React.FC<{
 									</Badge>
 								))}
 							</div>
+						</>
+					)}
+
+					{summary && (
+						<>
+							<Separator className="my-4" />
+							<Chat requestId={requestId} model={selectedModel} />
 						</>
 					)}
 				</CardContent>

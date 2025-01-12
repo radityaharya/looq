@@ -7,55 +7,55 @@ import type { Context } from "hono";
 import { search } from "src/db/schema";
 import { nanoid } from "nanoid";
 export const searchSchema = z.object({
-	q: z.string(),
-	language: z.string().optional().default("en-US"),
-	time_range: z.string().optional(),
-	safesearch: z.string().optional().default("0"),
-	categories: z.string().optional().default("general"),
-	pageno: z.string().optional().default("1"),
+  q: z.string(),
+  language: z.string().optional().default("en-US"),
+  time_range: z.string().optional(),
+  safesearch: z.string().optional().default("0"),
+  categories: z.string().optional().default("general"),
+  pageno: z.string().optional().default("1"),
 });
 
 export const autocompleteSchema = z.object({
-	q: z.string(),
+  q: z.string(),
 });
 
 export const autoCompleteResponseSchema = z.tuple([
-	z.string(),
-	z.array(z.string()),
+  z.string(),
+  z.array(z.string()),
 ]);
 
 export const searchResultSchema = z.object({
-	url: z.string(),
-	title: z.string(),
-	content: z.string().optional(),
-	engine: z.string(),
-	engines: z.array(z.string()),
-	positions: z.array(z.number()),
-	score: z.number(),
-	category: z.string(),
+  url: z.string(),
+  title: z.string(),
+  content: z.string().optional(),
+  engine: z.string(),
+  engines: z.array(z.string()),
+  positions: z.array(z.number()),
+  score: z.number(),
+  category: z.string(),
 });
 
 export const searchDataResponseSchema = z.object({
-	query: z.string(),
-	number_of_results: z.number(),
-	results: z.array(searchResultSchema),
-	infoboxes: z
-		.array(
-			z.object({
-				infobox: z.string().optional(),
-				content: z.union([z.string(), z.array(z.string())]).optional(),
-				urls: z.array(
-					z.object({
-						title: z.string(),
-						url: z.string(),
-					}),
-				),
-			}),
-		)
-		.optional(),
-	suggestions: z.array(z.string()),
-	requestId: z.string().optional(),
-	pageno: z.string(),
+  query: z.string(),
+  number_of_results: z.number(),
+  results: z.array(searchResultSchema),
+  infoboxes: z
+    .array(
+      z.object({
+        infobox: z.string().optional(),
+        content: z.union([z.string(), z.array(z.string())]).optional(),
+        urls: z.array(
+          z.object({
+            title: z.string(),
+            url: z.string(),
+          })
+        ),
+      })
+    )
+    .optional(),
+  suggestions: z.array(z.string()).optional(),
+  requestId: z.string(),
+  pageno: z.string(),
 });
 
 /**
@@ -69,57 +69,61 @@ export const searchDataResponseSchema = z.object({
  * @returns {Promise<Object>} - A promise that resolves to the search results.
  */
 export const fetchSearchResults = async ({
-	query,
-	baseUrl,
-	cfAccessCredentials,
-	openAICredentials,
-	context,
+  query,
+  baseUrl,
+  cfAccessCredentials,
+  openAICredentials,
+  context,
 }: {
-	query: z.infer<typeof searchSchema>;
-	baseUrl: string;
-	cfAccessCredentials: CFAccessCredentials;
-	openAICredentials: OpenAICredentials;
-	context: Context & { env: Bindings };
+  query: z.infer<typeof searchSchema>;
+  baseUrl: string;
+  cfAccessCredentials: CFAccessCredentials;
+  openAICredentials: OpenAICredentials;
+  context: Context & { env: Bindings };
 }): Promise<z.infer<typeof searchDataResponseSchema>> => {
-	const { pageno, ...restQuery } = query;
-	const searchparams = {
-		pageno: pageno.toString(),
-		...restQuery,
-	};
-	const searchParams = new URLSearchParams(searchparams).toString();
-	const searchUrl = `${baseUrl}/search?${searchParams}&format=json`;
+  const { pageno, ...restQuery } = query;
+  const searchparams = {
+    pageno: pageno.toString(),
+    ...restQuery,
+  };
+  const searchParams = new URLSearchParams(searchparams).toString();
+  const searchUrl = `${baseUrl}/search?${searchParams}&format=json`;
 
-	const response = await accessFetch(searchUrl, cfAccessCredentials);
-	const json = (await response.json()) as any;
-	json.pageno = pageno;
-	const data = searchDataResponseSchema.parse(json);
+  const response = await accessFetch(searchUrl, cfAccessCredentials);
+  const json = (await response.json()) as any;
+  json.pageno = pageno;
 
-	if (data.suggestions.length < 2) {
-		const suggestedSearches = await generateSuggestedSearches({
-			OPENAI_KEY: openAICredentials.OPENAI_KEY,
-			OPENAI_URL: openAICredentials.OPENAI_URL,
-			query: query.q,
-			additionalContext: data.results
-				.map((result) => result.content)
-				.join("\n\n-"),
-		});
-		data.suggestions = suggestedSearches.suggestions;
-	}
+  const requestId = nanoid();
+  json.requestId = requestId;
 
-	const db = await getDatabaseConnection(context);
-	const [insertedSearch] = await db
-		.insert(search)
-		.values({
-			id: nanoid(),
-			query: query.q,
-			results: data.results,
-			created: Math.floor(Date.now() / 1000),
-			infoBoxes: data.infoboxes,
-		})
-		.returning();
+  const data = searchDataResponseSchema.parse(json);
+  data.suggestions = data.suggestions ?? [];
 
-	data.requestId = insertedSearch.id;
-	return data;
+  if (data.suggestions.length < 2) {
+    const suggestedSearches = await generateSuggestedSearches({
+      OPENAI_KEY: openAICredentials.OPENAI_KEY,
+      OPENAI_URL: openAICredentials.OPENAI_URL,
+      query: query.q,
+      additionalContext: data.results
+        .map((result) => result.content)
+        .join("\n\n-"),
+    });
+    data.suggestions = suggestedSearches.suggestions;
+  }
+
+  const db = await getDatabaseConnection(context);
+  const [insertedSearch] = await db
+    .insert(search)
+    .values({
+      id: requestId,
+      query: query.q,
+      results: data.results,
+      created: Math.floor(Date.now() / 1000),
+      infoBoxes: data.infoboxes,
+    })
+    .returning();
+
+  return data;
 };
 
 /**
@@ -132,18 +136,18 @@ export const fetchSearchResults = async ({
  * @returns {Promise<z.infer<typeof autoCompleteResponseSchema>>} - A promise that resolves to the autocomplete response.
  */
 export const fetchAutocompleteResults = async ({
-	query,
-	baseUrl,
-	cfAccessCredentials,
+  query,
+  baseUrl,
+  cfAccessCredentials,
 }: {
-	query: z.infer<typeof autocompleteSchema>;
-	baseUrl: string;
-	cfAccessCredentials: CFAccessCredentials;
+  query: z.infer<typeof autocompleteSchema>;
+  baseUrl: string;
+  cfAccessCredentials: CFAccessCredentials;
 }): Promise<z.infer<typeof autoCompleteResponseSchema>> => {
-	const searchParams = new URLSearchParams(query).toString();
-	const searchUrl = `${baseUrl}/autocompleter?${searchParams}`;
+  const searchParams = new URLSearchParams(query).toString();
+  const searchUrl = `${baseUrl}/autocompleter?${searchParams}`;
 
-	const response = await accessFetch(searchUrl, cfAccessCredentials);
-	const data = await response.json();
-	return autoCompleteResponseSchema.parse(data);
+  const response = await accessFetch(searchUrl, cfAccessCredentials);
+  const data = await response.json();
+  return autoCompleteResponseSchema.parse(data);
 };
