@@ -29,6 +29,19 @@ export type Bindings = {
 
 export const app = new Hono<{ Bindings: Bindings }>()
   .use(logger())
+  .use(
+    "*",
+    cache({
+      cacheName: "looq",
+      cacheControl: "max-age=3600",
+      async keyGenerator(c) {
+        const url = new URL(c.req.url);
+        return crypto.subtle
+          .digest("SHA-256", new TextEncoder().encode(url.toString()))
+          .then((hash) => Buffer.from(hash).toString("base64"));
+      },
+    })
+  )
   .get("/search", zValidator("query", searchSchema), async (c) => {
     const query = c.req.valid("query");
     const {
@@ -106,34 +119,6 @@ export const app = new Hono<{ Bindings: Bindings }>()
     const data = modelResponseSchema.parse(await getModels(c));
     return c.json(data);
   })
-  .get(
-    "*",
-    cache({
-      cacheName: "looq",
-      cacheControl: "max-age=3600",
-      async keyGenerator(c) {
-        return crypto.subtle
-          .digest("SHA-256", new TextEncoder().encode(await c.req.json()))
-          .then((hash) => {
-            return Buffer.from(hash).toString("base64");
-          });
-      },
-    })
-  )
-  .post(
-    "*",
-    cache({
-      cacheName: "looq",
-      cacheControl: "max-age=3600",
-      async keyGenerator(c) {
-        return crypto.subtle
-          .digest("SHA-256", new TextEncoder().encode(await c.req.json()))
-          .then((hash) => {
-            return Buffer.from(hash).toString("base64");
-          });
-      },
-    })
-  )
   .post(
     "/chat",
     zValidator(
