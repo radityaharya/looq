@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import { Hono } from "hono";
+import { Hono, Context, Next } from "hono";
 import { cache } from "hono/cache";
 import { logger } from "hono/logger";
 import { getEnv } from "src/lib/env";
@@ -17,6 +17,7 @@ import {
 } from "src/lib/search";
 import { hc } from "hono/client";
 import { z } from "zod";
+import { getUserId } from "src/lib/user";
 
 export type Bindings = {
   SEARXNG_URL: string;
@@ -27,8 +28,15 @@ export type Bindings = {
   DB: D1Database;
 };
 
+const getUserIdFromHeader = async (c: Context, next: Next) => {
+  const userId = c.req.header("X-User-Id") || "legacy";
+  c.set("userId", userId);
+  await next();
+};
+
 export const app = new Hono<{ Bindings: Bindings }>()
   .use(logger())
+  .use(getUserIdFromHeader)
   .use(
     "*",
     cache({
@@ -53,7 +61,7 @@ export const app = new Hono<{ Bindings: Bindings }>()
     } = getEnv(c);
     try {
       const fetchOptions: any = {
-        query,
+        query: { ...query },
         baseUrl: SEARXNG_URL,
         context: c,
         openAICredentials: {

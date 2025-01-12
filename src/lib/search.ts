@@ -6,6 +6,8 @@ import type { Bindings } from "src/api";
 import type { Context } from "hono";
 import { search } from "src/db/schema";
 import { nanoid } from "nanoid";
+import { users } from "src/db/schema";
+
 export const searchSchema = z.object({
   q: z.string(),
   language: z.string().optional().default("en-US"),
@@ -112,10 +114,26 @@ export const fetchSearchResults = async ({
   }
 
   const db = await getDatabaseConnection(context);
+
+  let userId = context.get("userId");
+  if (userId === "legacy") {
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        id: nanoid(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    userId = newUser.id;
+    context.header("X-User-Id", userId);
+  }
+
   const [insertedSearch] = await db
     .insert(search)
     .values({
       id: requestId,
+      userId: userId,
       query: query.q,
       results: data.results,
       created: Math.floor(Date.now() / 1000),

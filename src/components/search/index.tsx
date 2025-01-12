@@ -37,6 +37,7 @@ import { ArrowUp, ChevronsUpDown } from "lucide-react";
 import { client } from "src/api";
 import { Spinner } from "../ui/spinner";
 import { debounce } from "src/lib/utils";
+import { getUserId, setUserId } from "src/lib/user";
 
 const ModelsDropdown = ({
 	models,
@@ -258,22 +259,38 @@ const SearchComponent: React.FC = () => {
 		queryKey: ["search", searchQuery, timeRange],
 		initialPageParam: "1",
 		queryFn: async ({ pageParam = "1" }) => {
+			const searchParams = {
+				q: searchQuery,
+				time_range: timeRange,
+				pageno: pageParam.toString(),
+			};
+			
 			const res = await client.api.search.$get({
-				query: {
-					q: searchQuery,
-					time_range: timeRange,
-					pageno: pageParam.toString(),
-				},
+				query: searchParams,
+			}, {
+				headers: {
+					'X-User-Id': getUserId()
+				}
 			});
+
 			if (res.status !== 200) {
 				throw new Error(`status_code ${res.status}`);
 			}
+
 			const data = await res.json();
+			
+			// Check for and store new user ID if present
+			const userId = res.headers.get("X-User-Id");
+			if (userId) {
+				setUserId(userId);
+			}
+
 			setSearchHistory((prev) => {
 				const newHistory = prev.filter((item) => item !== searchQuery);
 				newHistory.unshift(searchQuery);
 				return newHistory.slice(0, 5);
 			});
+
 			return data;
 		},
 		getNextPageParam: (lastPage) => String(Number(lastPage.pageno) + 1),

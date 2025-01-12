@@ -15,6 +15,20 @@
       "when": 1736697676868,
       "tag": "0001_living_absorbing_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1736704880082,
+      "tag": "0002_jazzy_runaways",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1736705782434,
+      "tag": "0003_friendly_stryfe",
+      "breakpoints": true
     }
   ]
 }

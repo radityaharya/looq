@@ -12,6 +12,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { getUserId } from "src/lib/user";
 
 type Message = {
   content: string;
@@ -231,7 +232,10 @@ export const Chat: React.FC<ChatProps> = ({ requestId, model }) => {
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-UserId": getUserId(),
+        },
         body: JSON.stringify({
           requestId,
           message: currentMessage,
