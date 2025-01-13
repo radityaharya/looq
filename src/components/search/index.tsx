@@ -38,6 +38,7 @@ import { client } from "src/api";
 import { Spinner } from "../ui/spinner";
 import { debounce } from "src/lib/utils";
 import { getUserId, setUserId } from "src/lib/user";
+import { useSearchHistory } from "src/hooks/use-search-history";
 
 const ModelsDropdown = ({
 	models,
@@ -220,10 +221,7 @@ const SearchComponent: React.FC = () => {
 		sources: [],
 	});
 	const [isStreamingSummary, setStreamingSummary] = useState(false);
-	const [searchHistory, setSearchHistory] = useLocalStorageState<string[]>(
-		"searchHistory",
-		[],
-	);
+	const { history, addToHistory, clearHistory } = useSearchHistory();
 	const [selectedModel, setSelectedModel] = useLocalStorageState<string>(
 		"selectedModel",
 		"groq/llama-3.1-70b-versatile",
@@ -285,11 +283,10 @@ const SearchComponent: React.FC = () => {
 				setUserId(userId);
 			}
 
-			setSearchHistory((prev) => {
-				const newHistory = prev.filter((item) => item !== searchQuery);
-				newHistory.unshift(searchQuery);
-				return newHistory.slice(0, 5);
-			});
+			// Add to search history
+			if (pageParam === "1") {
+				addToHistory(searchQuery, data.requestId);
+			}
 
 			return data;
 		},
@@ -387,7 +384,9 @@ const SearchComponent: React.FC = () => {
 	const handleType = useCallback(
 		(query: string) => {
 			setSearchQuery(query);
-			handleAutocomplete(query);
+			if (query.trim()) {
+				handleAutocomplete(query);
+			}
 		},
 		[handleAutocomplete],
 	);
@@ -398,6 +397,7 @@ const SearchComponent: React.FC = () => {
 		}
 	}, [searchQuery, refetch]);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
 		if (initialQuery) {
 			refetch();
@@ -430,9 +430,9 @@ const SearchComponent: React.FC = () => {
 							setSearchQuery={setSearchQuery}
 							handleType={handleType}
 							autocompleteData={
-								autocompleteData.length > 0
+								searchQuery.trim() && autocompleteData.length > 0
 									? { type: "autocomplete", data: autocompleteData }
-									: { type: "history", data: searchHistory }
+									: { type: "history", data: history.map(h => h.query) }
 							}
 							handleSearch={handleSearch}
 							isFocused={isFocused}
@@ -485,9 +485,7 @@ const SearchComponent: React.FC = () => {
 								search
 							</p>
 						) : (
-							<p className="mt-16 text-sm text-neutral-400/70">
-								No results found
-							</p>
+							null
 						)}
 						<div ref={bottomRef} />
 					</div>

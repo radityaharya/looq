@@ -8,7 +8,7 @@ export interface SearchHistoryItem {
   timestamp: number;
 }
 
-export function useSearchHistory(maxItems: number = 10) {
+export function useSearchHistory(maxItems = 10) {
   const userId = getUserId();
   const storageKey = `searchHistory_${userId}`;
 

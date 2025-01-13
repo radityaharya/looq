@@ -5,30 +5,13 @@ import {
 	CommandItem,
 	CommandList,
 } from "@/components/ui/command";
-import { HistoryIcon, SearchIcon } from "lucide-react";
+import { HistoryIcon, SearchIcon, Search } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef } from "react";
 import { FlatCard } from "../ui/flat-card";
 import { Button } from "../ui/button";
-import useLocalStorageState from "src/hooks/use-localstorage-state";
 import { Skeleton } from "@/components/ui/skeleton";
-
-// delete search history from local storage
-const clearHistoryButton = () => {
-	const [searchHistory, setSearchHistory] = useLocalStorageState<string[]>(
-		"searchHistory",
-		[],
-	);
-	const clearHistory = () => {
-		setSearchHistory([]);
-	};
-
-	return (
-		<Button onClick={clearHistory} size={"sm"} variant={"outline"} className="">
-			Clear
-		</Button>
-	);
-};
+import { useSearchHistory } from "src/hooks/use-search-history";
 
 export const SearchBar = ({
 	searchQuery,
@@ -48,8 +31,10 @@ export const SearchBar = ({
 	setIsFocused: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
 	const inputRef = useRef<HTMLInputElement>(null);
+	const { history, clearHistory } = useSearchHistory();
 
-	autocompleteData.data = autocompleteData.data
+	// Filter and limit suggestions
+	const suggestions = autocompleteData.data
 		.filter((suggestion) => suggestion !== "")
 		.slice(0, 5);
 
@@ -68,49 +53,89 @@ export const SearchBar = ({
 
 	return (
 		<div className="bg-card/50 relative w-full rounded-none">
-			<FlatCard>
+			<FlatCard className="w-full">
 				<Command
 					shouldFilter={false}
-					className="border border-primary/10 rounded-none"
+					className="border border-primary/10 rounded-none w-full"
 				>
-					<CommandInput
-						ref={inputRef}
-						placeholder="Search..."
-						className="rounded-none"
-						value={searchQuery}
-						onValueChange={(query) => handleType(query)}
-						onFocus={() => setIsFocused(true)}
-						onBlur={() => setIsFocused(false)}
-						onKeyUp={(e) => {
-							if (isFocused && e.key === "Enter" && searchQuery.length > 0) {
-								handleSearch(searchQuery);
-							}
-						}}
-					/>
-					<CommandList>
-						<div className="flex justify-between items-center px-3 py-2">
-							<span className="text-muted-foreground text-xs">
-								{autocompleteData.type === "autocomplete"
-									? "Suggestions"
-									: "History"}
-							</span>
-							{clearHistoryButton()}
-						</div>
-						{autocompleteData?.data.map((suggestion) => (
-							<CommandItem
-								key={suggestion}
-								onSelect={() => setSearchQuery(suggestion)}
-								onClick={() => handleSearch(suggestion)}
-							>
-								{autocompleteData.type === "autocomplete" ? (
-									<SearchIcon className="mr-2 h-4 w-4" />
-								) : (
-									<HistoryIcon className="mr-2 h-4 w-4" />
+					<div className="flex w-full">
+						<CommandInput
+							ref={inputRef}
+							placeholder="Search..."
+							className="rounded-none flex-1"
+							value={searchQuery}
+							onValueChange={(query) => handleType(query)}
+							onFocus={() => setIsFocused(true)}
+							onBlur={() => setIsFocused(false)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" && !e.shiftKey) {
+									e.preventDefault();
+									if (searchQuery.length > 0) {
+										handleSearch(searchQuery);
+									}
+								}
+							}}
+						/>
+						<Button 
+							variant="ghost"
+							size="icon"
+							onClick={() => handleSearch(searchQuery)}
+							className="mr-2"
+						>
+							<Search className="h-4 w-4" />
+						</Button>
+					</div>
+					{((autocompleteData.type === "autocomplete" && suggestions.length > 0) ||
+						(autocompleteData.type === "history" && history.length > 0)) && (
+						<CommandList>
+							<div className="flex justify-between items-center px-3 py-2">
+								<span className="text-muted-foreground text-xs">
+									{autocompleteData.type === "autocomplete"
+										? "Suggestions"
+										: "History"}
+								</span>
+								{autocompleteData.type === "history" && history.length > 0 && (
+									<Button onClick={clearHistory} size={"sm"} variant={"outline"}>
+										Clear
+									</Button>
 								)}
-								<span>{suggestion}</span>
-							</CommandItem>
-						))}
-					</CommandList>
+							</div>
+							{autocompleteData.type === "autocomplete" ? (
+								suggestions.map((suggestion) => (
+									<CommandItem
+										key={suggestion}
+										value={suggestion}
+										onSelect={() => {
+											setSearchQuery(suggestion);
+											handleSearch(suggestion);
+										}}
+										className="cursor-pointer"
+									>
+										<SearchIcon className="mr-2 h-4 w-4" />
+										<span>{suggestion}</span>
+									</CommandItem>
+								))
+							) : (
+								history.map((item) => (
+									<CommandItem
+										key={item.requestId}
+										value={item.query}
+										onSelect={() => {
+											setSearchQuery(item.query);
+											handleSearch(item.query);
+										}}
+										className="cursor-pointer"
+									>
+										<HistoryIcon className="mr-2 h-4 w-4" />
+										<span>{item.query}</span>
+										<span className="ml-auto text-xs text-muted-foreground">
+											{new Date(item.timestamp).toLocaleDateString()}
+										</span>
+									</CommandItem>
+								))
+							)}
+						</CommandList>
+					)}
 				</Command>
 			</FlatCard>
 		</div>
