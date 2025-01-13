@@ -31,9 +31,9 @@ export const modelResponseSchema = z.object({
   object: z.string(),
 });
 
-const truncateContent = (content: string, maxLength: number = 1000) => {
+const truncateContent = (content: string, maxLength = 1000) => {
   if (content.length <= maxLength) return content;
-  return content.slice(0, maxLength) + "...";
+  return `${content.slice(0, maxLength)}...`;
 };
 
 /**
@@ -262,6 +262,7 @@ export const generateChat = async ({
   const searchData = result[0];
   const slicedResults = searchData.results.slice(0, 10);
   const slicedInfoBoxes = searchData.infoBoxes?.slice(0, 5);
+  const previousMessages = searchData.chat ?? [];
 
   let prompt = `You are a helpful AI assistant. Use the following search results and context to answer the user's question. Be concise and accurate.\n\n`;
 
@@ -279,18 +280,26 @@ export const generateChat = async ({
       .join("\n\n")}\n\n`;
   }
 
-  const chatHistory = searchData.chat ?? [];
-  prompt += `Chat history: ${chatHistory
-    .map((c) => `${c.role === "user" ? "User" : "Assistant"}: ${c.content}`)
-    .join("\n")}\n\n`;
-
   prompt += `User question: ${data.message}\n\n`;
 
   return streamSSE(context, async (stream) => {
     try {
-      const result = await streamText({
-        model: ai(data.model ?? "groq/llama-3.1-70b-versatile"),
-        prompt,
+      const message = data.message;
+      const model = data.model ?? "groq/llama-3.1-70b-versatile";
+
+      const result = streamText({
+        model: ai(model),
+        messages: [
+          {
+            role: "system",
+            content: prompt,
+          },
+          ...previousMessages,
+          {
+            role: "user",
+            content: message,
+          },
+        ],
         maxTokens: 500,
       });
 
@@ -304,12 +313,11 @@ export const generateChat = async ({
         });
       }
 
-      const existingChat = searchData.chat ?? [];
       await db
         .update(search)
         .set({
           chat: [
-            ...existingChat,
+            ...previousMessages,
             {
               content: data.message,
               role: "user",
