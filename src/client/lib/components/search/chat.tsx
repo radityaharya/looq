@@ -10,8 +10,7 @@ import {
 } from "src/client/lib/components/ui/tooltip";
 import { AlertCircle, RefreshCcw, Send, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MarkdownRenderer } from "src/client/lib/components/ui/markdown";
 import { getUserId } from "src/client/lib/user";
 
 type Message = {
@@ -74,50 +73,6 @@ const RegenerateButton = ({ onClick }: { onClick: () => void }) => (
 	</div>
 );
 
-const MarkdownContent = ({ content }: { content: string }) => (
-	<Markdown
-		remarkPlugins={[remarkGfm]}
-		components={{
-			p: ({ children }) => <p className="mb-2">{children}</p>,
-			ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
-			ol: ({ children }) => (
-				<ol className="list-decimal pl-4 mb-2">{children}</ol>
-			),
-			li: ({ children }) => <li className="mb-1">{children}</li>,
-			a: ({ children, href }) => (
-				<a
-					href={href}
-					target="_blank"
-					rel="noopener noreferrer"
-					className="text-primary underline truncate overflow-hidden whitespace-nowrap break-words"
-				>
-					<TooltipProvider>
-						<Tooltip>
-							<TooltipTrigger>
-								<Badge
-									variant="secondary"
-									className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors text-[10px] py-0"
-								>
-									{(() => {
-										const urlPattern = /^(https?:\/\/)?([^\/?#]+)(?:[\/?#]|$)/i;
-										const match = (href as string).match(urlPattern);
-										return match ? match[2] : href;
-									})()}
-								</Badge>
-							</TooltipTrigger>
-							<TooltipContent>
-								<span className="text-xs">{href}</span>
-							</TooltipContent>
-						</Tooltip>
-					</TooltipProvider>
-				</a>
-			),
-		}}
-	>
-		{content}
-	</Markdown>
-);
-
 const ChatBubble = ({
 	message,
 	isStreaming,
@@ -142,7 +97,7 @@ const ChatBubble = ({
 			<ErrorMessage onRetry={onRetry} />
 		) : (
 			<div className="space-y-2">
-				<MarkdownContent content={message.content} />
+				<MarkdownRenderer content={message.content} />
 				{message.role === "assistant" && !isStreaming && (
 					<RegenerateButton onClick={onRetry} />
 				)}
@@ -190,6 +145,7 @@ export const Chat: React.FC<ChatProps> = ({ requestId, model }) => {
 	const scrollAreaRef = useRef<HTMLDivElement>(null);
 	const abortControllerRef = useRef<AbortController | null>(null);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
 		const viewport = scrollAreaRef.current?.querySelector(
 			"[data-radix-scroll-area-viewport]",

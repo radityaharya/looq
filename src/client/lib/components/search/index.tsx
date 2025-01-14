@@ -53,6 +53,7 @@ const ModelsDropdown = ({
 			<PopoverTrigger asChild>
 				<Button
 					variant="outline"
+					// biome-ignore lint/a11y/useSemanticElements: <explanation>
 					role="combobox"
 					aria-expanded={open}
 					size={"sm"}
@@ -110,6 +111,7 @@ const TimeRangeDropdown = ({
 			<DropdownMenuTrigger asChild>
 				<Button
 					variant="outline"
+					// biome-ignore lint/a11y/useSemanticElements: <explanation>
 					role="combobox"
 					size={"sm"}
 					className="w-32 justify-between border-2 border-primary/10 flex gap-1 text-xs"
@@ -393,11 +395,14 @@ const SearchComponent: React.FC = () => {
 		[handleAutocomplete],
 	);
 
-	const handleSearch = useCallback(() => {
+	const handleSearch = useCallback((query?: string) => {
+		if (query) {
+			handleType(query);
+		}
 		if (searchQuery.trim()) {
 			refetch();
 		}
-	}, [searchQuery, refetch]);
+	}, [searchQuery, refetch, handleType]);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
@@ -507,7 +512,7 @@ const SearchComponent: React.FC = () => {
 								isStreamingSummary={isStreamingSummary}
 								data={searchData.pages[0]}
 								summary={summary}
-								queryHandler={handleType}
+								queryHandler={handleSearch}
 								requestId={searchData.pages[0].requestId ?? ""}
 								selectedModel={selectedModel}
 							/>

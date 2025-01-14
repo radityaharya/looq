@@ -9,8 +9,7 @@ import {
 	TooltipTrigger,
 } from "src/client/lib/components/ui/tooltip";
 import type React from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MarkdownRenderer } from "src/client/lib/components/ui/markdown";
 import type { searchDataResponseSchema } from "src/common/schema";
 import type { z } from "zod";
 import { FlatCard } from "../ui/flat-card";
@@ -53,54 +52,13 @@ export const RightColumn: React.FC<Props> = ({
 				<CardContent className="pt-6">
 					{summary ? (
 						<div className="text-sm">
-							<Markdown
-								remarkPlugins={[remarkGfm]}
-								components={{
-									p: ({ children }) => <p className="mb-2">{children}</p>,
-									ul: ({ children }) => (
-										<ul className="list-disc pl-4 mb-2">{children}</ul>
-									),
-									ol: ({ children }) => (
-										<ol className="list-decimal pl-4 mb-2">{children}</ol>
-									),
-									li: ({ children }) => <li className="mb-1">{children}</li>,
-									a: ({ children, href }) => (
-										<a
-											href={href}
-											target="_blank"
-											rel="noopener noreferrer"
-											className="text-primary underline truncate overflow-hidden whitespace-nowrap break-words"
-										>
-											<TooltipProvider>
-												<Tooltip>
-													<TooltipTrigger>
-														<Badge
-															variant="secondary"
-															className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors text-[10px] py-0"
-														>
-															{(() => {
-																const urlPattern =
-																	/^(https?:\/\/)?([^\/?#]+)(?:[\/?#]|$)/i;
-																const match = (href as string).match(
-																	urlPattern,
-																);
-																return match ? match[2] : href;
-															})()}
-														</Badge>
-													</TooltipTrigger>
-													<TooltipContent>
-														<span className="text-xs">{href}</span>
-													</TooltipContent>
-												</Tooltip>
-											</TooltipProvider>
-										</a>
-									),
-								}}
-							>
-								{Array.isArray(summary.content)
+							<MarkdownRenderer 
+								content={Array.isArray(summary.content)
 									? summary.content.join("\n\n")
-									: summary.content}
-							</Markdown>
+									: summary.content
+								} 
+								onSearchClick={queryHandler}
+							/>
 							<div className="flex flex-wrap gap-2 mt-2">
 								{summary.sources.map((source, index) => (
 									<a
