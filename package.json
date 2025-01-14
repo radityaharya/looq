@@ -9,7 +9,7 @@
     "dev:vite": "dotenv -e .dev.vars vite",
     "start": "dotenv -e .prod.vars bun build/server.js",
     "build": "bun run typecheck && vite build && rollup -c rollup.config.mjs",
-    "build:bun": "NODE_ENV=production && vite build && bun build --target bun --compile --smol --minify --sourcemap --outfile server server.ts",
+    "build:bun": "NODE_ENV=production && vite build && bun build --target bun --compile --smol --minify --sourcemap --outfile server src/server.ts",
     "deploy": "bun run build && wrangler pages deploy",
     "db:generate": "dotenv -e .dev.vars drizzle-kit generate",
     "db:up": "dotenv -e .dev.vars drizzle-kit up",

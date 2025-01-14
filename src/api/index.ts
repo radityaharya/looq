@@ -8,13 +8,10 @@ import {
 	autocompleteSchema,
 	modelResponseSchema,
 	searchSchema,
-} from "../lib/schema";
-import { generateChat, generateSummary, getModels } from "../lib/server/ai";
-import { getEnv } from "../lib/server/env";
-import {
-	fetchAutocompleteResults,
-	fetchSearchResults,
-} from "../lib/server/search";
+} from "../common/schema";
+import { generateChat, generateSummary, getModels } from "./lib/ai";
+import { getEnv } from "./lib/env";
+import { fetchAutocompleteResults, fetchSearchResults } from "./lib/search";
 
 export type Bindings = {
 	SEARXNG_URL: string;

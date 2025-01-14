@@ -36,6 +36,7 @@ export default defineConfig({
 				/openai/,
 
 				// Server-side paths
+				/^src\/api\/.*/,
 				/^src\/lib\/server\/.*/,
 				/^functions\/api\/.*/,
 				/^server\.ts$/,
@@ -112,6 +113,8 @@ export default defineConfig({
 		alias: {
 			src: path.resolve(__dirname, "./src"),
 			"@": path.resolve(__dirname, "./src"),
+			"@client": path.resolve(__dirname, "./src/client"),
+			"@api": path.resolve(__dirname, "./src/api"),
 			functions: path.resolve(__dirname, "./functions"),
 		},
 	},
@@ -123,7 +126,7 @@ export default defineConfig({
 			},
 		}),
 		devServer({
-			entry: "server.ts",
+			entry: "src/server.ts",
 			exclude: [
 				/.*\.tsx?($|\?)/,
 				/.*\.(s?css|less)($|\?)/,
@@ -137,7 +140,7 @@ export default defineConfig({
 				/.*\.(mp4|webm|ogg|mp3|wav|flac|aac)($|\?)/,
 				/.*\.(doc|docx|pdf|xlsx|xls|csv|txt)($|\?)/,
 			],
-			injectClientScript: false,
+			injectClientScript: true,
 		}),
 		visualizer({
 			filename: "dist/stats.html",

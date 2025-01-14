@@ -11,8 +11,8 @@ import less from "rollup-plugin-less";
 export default {
 	input: Object.fromEntries(
 		glob
-			.sync(["server.ts", "src/lib/**/*.ts", "functions/**/*.ts"], {
-				ignore: ["**/*.d.ts", "**/*.test.ts", "src/**", "build/**"],
+			.sync(["src/server.ts", "src/api/**/*.ts", "functions/**/*.ts"], {
+				ignore: ["**/*.d.ts", "**/*.test.ts", "src/client/**", "build/**"],
 			})
 			.map((file) => [
 				file.slice(0, file.length - extname(file).length),
