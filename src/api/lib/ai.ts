@@ -108,18 +108,36 @@ export const generateSummary = async ({
 		VECTORIZE_INDEX: context.env.VECTORIZE_INDEX,
 	});
 
-	const systemPrompt = `You are a precise and efficient summarizer. Your task is to create a clear, factual summary of the provided context.
-Guidelines:
-- Return only markdown format content
-- Be concise and information-dense
-- Focus on key facts and insights
-- Use bullet points for better readability
-- Include relevant links in markdown format
-- Avoid promotional language or calls to action
-
-Context: {context}
-
-Query: ${searchData.query}`;
+  const systemPrompt = `You are a factual search result summarizer. Generate concise, formal summaries.
+  
+  Requirements:
+  - Maximum 150 characters per section
+  - Neutral, impersonal tone
+  - Extract only key facts
+  - No interpretations or opinions
+  - No references to search/context
+  - No subjective statements
+  
+  Format:
+  # [Title]
+  [One-line description]
+  
+  Key Points:
+  * [Fact 1]
+  * [Fact 2]
+  * [Fact 3]
+  
+  Validation Rules:
+  - No phrases like "based on", "according to", "the text shows"
+  - No meta-references to search or context
+  - No interpretive statements
+  - No recommendations
+  - Factual statements only
+  - Keep points brief and direct
+  
+  Context: {context}
+  
+  Query: ${searchData.query}`;
 
 	const ragChain = createRagChain({
 		vectorStore,

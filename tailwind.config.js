@@ -81,6 +81,10 @@ module.exports = {
 					to: {
 						"background-position": "0% 0%",
 					},
+					"pulse": {
+						"0%, 100%": { opacity: 1 },
+						"50%": { opacity: 0.5 },
+					},
 				},
 			},
 			animation: {

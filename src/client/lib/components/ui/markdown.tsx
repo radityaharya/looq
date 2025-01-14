@@ -42,43 +42,43 @@ export const MarkdownRenderer = ({ content, onSearchClick }: { content: string, 
     remarkPlugins={[remarkGfm, remarkDirective, remarkSearchLinks]}
     components={{
       h1: ({ children }) => (
-        <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl mb-4">
+        <h1 className="scroll-m-20 text-3xl font-extrabold tracking-tight lg:text-4xl mb-2">
           {children}
         </h1>
       ),
       h2: ({ children }) => (
-        <h2 className="scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight first:mt-0 mb-4">
+        <h2 className="scroll-m-20 border-b pb-2 text-2xl font-semibold tracking-tight first:mt-0 mb-2">
           {children}
         </h2>
       ),
       h3: ({ children }) => (
-        <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight mb-3">
+        <h3 className="scroll-m-20 text-xl font-semibold tracking-tight mb-2">
           {children}
         </h3>
       ),
       h4: ({ children }) => (
-        <h4 className="scroll-m-20 text-xl font-semibold tracking-tight mb-3">
+        <h4 className="scroll-m-20 text-lg font-semibold tracking-tight mb-2">
           {children}
         </h4>
       ),
       h5: ({ children }) => (
-        <h5 className="scroll-m-20 text-lg font-semibold tracking-tight mb-2">
+        <h5 className="scroll-m-20 text-base font-semibold tracking-tight mb-1">
           {children}
         </h5>
       ),
       h6: ({ children }) => (
-        <h6 className="scroll-m-20 text-base font-semibold tracking-tight mb-2">
+        <h6 className="scroll-m-20 text-sm font-semibold tracking-tight mb-1">
           {children}
         </h6>
       ),
-      p: ({ children }) => <p className="mb-3 leading-7">{children}</p>,
+      p: ({ children }) => <p className="mb-2 leading-6">{children}</p>,
       ul: ({ children }) => (
-        <ul className="list-disc pl-6 mb-3 space-y-2">{children}</ul>
+        <ul className="list-disc pl-6 mb-2 space-y-1">{children}</ul>
       ),
       ol: ({ children }) => (
-        <ol className="list-decimal pl-6 mb-3 space-y-2">{children}</ol>
+        <ol className="list-decimal pl-6 mb-2 space-y-1">{children}</ol>
       ),
-      li: ({ children }) => <li className="leading-7">{children}</li>,
+      li: ({ children }) => <li className="leading-6">{children}</li>,
       a: ({ children, href }) => (
         <a
           href={href}
@@ -91,7 +91,7 @@ export const MarkdownRenderer = ({ content, onSearchClick }: { content: string, 
               <TooltipTrigger>
                 <Badge
                   variant="secondary"
-                  className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors text-[10px] py-0"
+                  className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors text-[11px] py-0"
                 >
                   {(() => {
                     const urlPattern = /^(https?:\/\/)?([^\/?#]+)(?:[\/?#]|$)/i;
@@ -152,13 +152,13 @@ export const MarkdownRenderer = ({ content, onSearchClick }: { content: string, 
           {children}
         </td>
       ),
-      span: ({ children, className, ...props }) => {
+      span: ({ children, className, ...props }: React.HTMLAttributes<HTMLSpanElement> & { 'data-search-query'?: string }) => {
         if (className === 'search-link') {
           return (
             <Badge
               variant="secondary"
               className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
-              onClick={() => onSearchClick?.(props['data-search-query'])}
+              onClick={() => onSearchClick?.(props['data-search-query'] as string)}
             >
               🔍 {children}
             </Badge>
@@ -170,4 +170,4 @@ export const MarkdownRenderer = ({ content, onSearchClick }: { content: string, 
   >
     {content}
   </Markdown>
-); 
+);

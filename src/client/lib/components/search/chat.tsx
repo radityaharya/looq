@@ -8,10 +8,11 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "src/client/lib/components/ui/tooltip";
-import { AlertCircle, RefreshCcw, Send, X } from "lucide-react";
+import { AlertCircle, RefreshCcw, Send, X, ArrowUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { MarkdownRenderer } from "src/client/lib/components/ui/markdown";
 import { getUserId } from "src/client/lib/user";
+import { ShineBorder } from "src/client/lib/components/ui/shine-border";
 
 type Message = {
 	content: string;
@@ -81,30 +82,68 @@ const ChatBubble = ({
 	message: Message;
 	isStreaming: boolean;
 	onRetry: () => void;
-}) => (
-	<div
-		className={`rounded-lg p-4 text-sm mb-4 group ${
-			message.role === "user" ? "bg-muted/70 ml-8" : "bg-muted mr-8"
-		}`}
-	>
-		<div className="text-xs text-muted-foreground mb-1">
-			{message.role === "user" ? "You" : "Assistant"}
-		</div>
-		{message.content === "" ? (
-			<LoadingDots />
-		) : message.content ===
-			"An error occurred while processing your message." ? (
-			<ErrorMessage onRetry={onRetry} />
-		) : (
-			<div className="space-y-2">
-				<MarkdownRenderer content={message.content} />
-				{message.role === "assistant" && !isStreaming && (
-					<RegenerateButton onClick={onRetry} />
-				)}
+}) => {
+	const bubbleRef = useRef<HTMLDivElement>(null);
+
+	const scrollToMessage = () => {
+		const viewport = bubbleRef.current?.closest('[data-radix-scroll-area-viewport]');
+		if (!viewport || !bubbleRef.current) return;
+
+		const bubbleTop = bubbleRef.current.offsetTop;
+		viewport.scrollTo({
+			top: bubbleTop - 16, // 16px padding from top
+			behavior: 'smooth'
+		});
+	};
+
+	return (
+		<div
+			ref={bubbleRef}
+			className={`rounded-lg p-4 text-sm mb-4 group ${
+				message.role === "user" ? "bg-zinc-900/70 ml-8" : "bg-zinc-800 mr-8"
+			}`}
+		>
+			<div className="text-xs text-muted-foreground mb-1">
+				{message.role === "user" ? "You" : "Assistant"}
 			</div>
-		)}
-	</div>
-);
+			{message.content === "" ? (
+				<LoadingDots />
+			) : message.content ===
+				"An error occurred while processing your message." ? (
+				<ErrorMessage onRetry={onRetry} />
+			) : (
+				<div className="space-y-2">
+					<MarkdownRenderer content={message.content} />
+					{message.role === "assistant" && !isStreaming && (
+						<div className="flex justify-end gap-2">
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={onRetry}
+								className="h-6 w-6 p-0 md:invisible md:group-hover:visible md:opacity-0 md:group-hover:opacity-100 transition-all duration-200 hover:w-[140px] hover:border relative"
+							>
+								<div className="absolute inset-0 flex items-center justify-end px-1.5">
+									<span className="text-[10px] mr-1 truncate opacity-0 hover:opacity-100 transition-opacity duration-200">
+										Regenerate response
+									</span>
+									<RefreshCcw className="h-3 w-3 flex-shrink-0" />
+								</div>
+							</Button>
+              <Button
+								variant="ghost"
+								size="sm"
+								onClick={scrollToMessage}
+								className="h-6 w-6 p-0 md:invisible md:group-hover:visible md:opacity-0 md:group-hover:opacity-100 transition-all duration-200"
+							>
+								<ArrowUp className="h-3 w-3" />
+							</Button>
+						</div>
+					)}
+				</div>
+			)}
+		</div>
+	);
+};
 
 const ChatInput = ({
 	message,
@@ -119,18 +158,28 @@ const ChatInput = ({
 	onSend: () => void;
 	onAbort: () => void;
 }) => (
-	<div className="flex gap-2">
-		<Input
-			placeholder="Ask a question about these results..."
-			value={message}
-			onChange={(e) => onMessageChange(e.target.value)}
-			onKeyDown={(e) => e.key === "Enter" && onSend()}
-			disabled={isStreaming}
-		/>
+	<div className="flex items-center gap-2">
+		<ShineBorder
+			active={isStreaming}
+			borderRadius={6}
+			borderWidth={2}
+			color={isStreaming ? ["#fafafa"] : "#27272a"}
+			className="flex-1 min-h-0"
+		>
+			<Input
+				placeholder="Ask a question about these results..."
+				value={message}
+				onChange={(e) => onMessageChange(e.target.value)}
+				onKeyDown={(e) => e.key === "Enter" && onSend()}
+				disabled={isStreaming}
+				className="focus-visible:ring-0 focus-visible:ring-offset-0 h-10 bg-zinc-900 disabled:bg-zinc-800"
+			/>
+		</ShineBorder>
 		<Button
 			size="icon"
 			onClick={isStreaming ? onAbort : onSend}
 			variant={isStreaming ? "destructive" : "default"}
+			className="h-9 w-9"
 		>
 			{isStreaming ? <X className="h-4 w-4" /> : <Send className="h-4 w-4" />}
 		</Button>
@@ -139,7 +188,9 @@ const ChatInput = ({
 
 export const Chat: React.FC<ChatProps> = ({ requestId, model }) => {
 	const [message, setMessage] = useState("");
-	const [messages, setMessages] = useState<Message[]>([]);
+	const [messages, setMessages] = useState<Message[]>([
+		{ content: "How can I help you?", role: "assistant" }
+	]);
 	const [isStreaming, setIsStreaming] = useState(false);
 
 	const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -149,21 +200,25 @@ export const Chat: React.FC<ChatProps> = ({ requestId, model }) => {
 	useEffect(() => {
 		const viewport = scrollAreaRef.current?.querySelector(
 			"[data-radix-scroll-area-viewport]",
-		);
-		if (viewport) {
-			if (
-				isStreaming ||
-				viewport.scrollHeight - viewport.scrollTop <=
-					viewport.clientHeight + 100
-			) {
-				setTimeout(() => {
+			);
+			
+			if (!viewport) return;
+	
+			const shouldAutoScroll = () => {
+				const tolerance = 30; // pixels from bottom
+				const distanceFromBottom = 
+					viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+				return isStreaming || distanceFromBottom <= tolerance;
+			};
+	
+			if (shouldAutoScroll()) {
+				requestAnimationFrame(() => {
 					viewport.scrollTo({
 						top: viewport.scrollHeight,
-						behavior: "smooth",
+						behavior: isStreaming ? "auto" : "smooth",
 					});
-				}, 0);
+				});
 			}
-		}
 	}, [messages, isStreaming]);
 
 	const handleAbort = () => {
@@ -335,13 +390,13 @@ export const Chat: React.FC<ChatProps> = ({ requestId, model }) => {
 				</div>
 			</ScrollArea>
 
-			<ChatInput
-				message={message}
-				isStreaming={isStreaming}
-				onMessageChange={setMessage}
-				onSend={handleChat}
-				onAbort={handleAbort}
-			/>
+				<ChatInput
+					message={message}
+					isStreaming={isStreaming}
+					onMessageChange={setMessage}
+					onSend={handleChat}
+					onAbort={handleAbort}
+				/>
 		</div>
 	);
 };

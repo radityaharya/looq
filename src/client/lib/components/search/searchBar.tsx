@@ -75,21 +75,22 @@ export const SearchBar = ({
 									}
 								}
 							}}
-						/>
-						<Button
-							variant="ghost"
-							size="icon"
-							onClick={() => handleSearch(searchQuery)}
-							className="mr-2"
 						>
-							<Search className="h-4 w-4" />
-						</Button>
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={() => handleSearch(searchQuery)}
+								className="ml-2"
+							>
+								<Search className="h-4 w-4" />
+							</Button>
+						</CommandInput>
 					</div>
 					{((autocompleteData.type === "autocomplete" &&
 						suggestions.length > 0) ||
 						(autocompleteData.type === "history" && history.length > 0)) && (
-						<CommandList>
-							<div className="flex justify-between items-center px-3 py-2">
+						<>
+							<div className="flex justify-between items-center px-3 py-2 h-10">
 								<span className="text-muted-foreground text-xs">
 									{autocompleteData.type === "autocomplete"
 										? "Suggestions"
@@ -105,39 +106,41 @@ export const SearchBar = ({
 									</Button>
 								)}
 							</div>
-							{autocompleteData.type === "autocomplete"
-								? suggestions.map((suggestion) => (
-										<CommandItem
-											key={suggestion}
-											value={suggestion}
-											onSelect={() => {
-												setSearchQuery(suggestion);
-												handleSearch(suggestion);
-											}}
-											className="cursor-pointer"
-										>
-											<SearchIcon className="mr-2 h-4 w-4" />
-											<span>{suggestion}</span>
-										</CommandItem>
-									))
-								: history.map((item) => (
-										<CommandItem
-											key={item.requestId}
-											value={item.query}
-											onSelect={() => {
-												setSearchQuery(item.query);
-												handleSearch(item.query);
-											}}
-											className="cursor-pointer"
-										>
-											<HistoryIcon className="mr-2 h-4 w-4" />
-											<span>{item.query}</span>
-											<span className="ml-auto text-xs text-muted-foreground">
-												{new Date(item.timestamp).toLocaleDateString()}
-											</span>
-										</CommandItem>
-									))}
-						</CommandList>
+							<CommandList>
+								{autocompleteData.type === "autocomplete"
+									? suggestions.map((suggestion) => (
+											<CommandItem
+												key={suggestion}
+												value={suggestion}
+												onSelect={() => {
+													setSearchQuery(suggestion);
+													setTimeout(() => handleSearch(suggestion), 0);
+												}}
+												className="cursor-pointer"
+											>
+												<SearchIcon className="mr-2 h-4 w-4" />
+												<span>{suggestion}</span>
+											</CommandItem>
+										))
+									: history.map((item) => (
+											<CommandItem
+												key={item.requestId}
+												value={item.query}
+												onSelect={() => {
+													setSearchQuery(item.query);
+													handleSearch(item.query);
+												}}
+												className="cursor-pointer"
+											>
+												<HistoryIcon className="mr-2 h-4 w-4" />
+												<span>{item.query}</span>
+												<span className="ml-auto text-xs text-muted-foreground">
+													{new Date(item.timestamp).toLocaleDateString()}
+												</span>
+											</CommandItem>
+										))}
+							</CommandList>
+						</>
 					)}
 				</Command>
 			</FlatCard>

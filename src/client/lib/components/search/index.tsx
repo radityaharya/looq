@@ -231,6 +231,15 @@ const SearchComponent: React.FC = () => {
 	);
 	const { autocompleteData, handleAutocomplete } = useAutocomplete(client);
 	const bottomRef = useRef<HTMLDivElement>(null);
+	const sseRef = useRef<SSE | null>(null);
+
+	const abortStreaming = useCallback(() => {
+		if (sseRef.current) {
+			sseRef.current.close();
+			sseRef.current = null;
+			setStreamingSummary(false);
+		}
+	}, []);
 
 	const { data: models, isLoading: isModelsLoading } = useQuery({
 		queryKey: ["models"],
@@ -301,6 +310,8 @@ const SearchComponent: React.FC = () => {
 
 	const streamSummary = useCallback(
 		async (data: z.infer<typeof searchDataResponseSchema>) => {
+			abortStreaming();
+
 			setSummary(null);
 			setStreamingSummary(true);
 			try {
@@ -314,6 +325,8 @@ const SearchComponent: React.FC = () => {
 					},
 					payload: JSON.stringify(payload),
 				});
+
+				sseRef.current = source;
 
 				source.addEventListener("ai-response", (event: any) => {
 					const data = JSON.parse(event.data);
@@ -332,6 +345,7 @@ const SearchComponent: React.FC = () => {
 					});
 					setStreamingSummary(false);
 					source.close();
+					sseRef.current = null;
 				});
 
 				source.addEventListener("DONE", (event: any) => {
@@ -347,6 +361,7 @@ const SearchComponent: React.FC = () => {
 					});
 					setStreamingSummary(false);
 					source.close();
+					sseRef.current = null;
 				});
 
 				source.stream();
@@ -354,7 +369,7 @@ const SearchComponent: React.FC = () => {
 				console.error("Error initializing SSE:", error);
 			}
 		},
-		[selectedModel],
+		[selectedModel, abortStreaming],
 	);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
@@ -375,7 +390,7 @@ const SearchComponent: React.FC = () => {
 					fetchNextPage();
 				}
 			},
-			{ rootMargin: "200px" },
+			{ rootMargin: "800px" },
 		);
 
 		if (bottomRef.current) {
@@ -395,14 +410,21 @@ const SearchComponent: React.FC = () => {
 		[handleAutocomplete],
 	);
 
+	const handleModelChange = useCallback((model: string) => {
+		abortStreaming();
+		setSelectedModel(model);
+	}, [abortStreaming, setSelectedModel]);
+
 	const handleSearch = useCallback((query?: string) => {
+		abortStreaming();
 		if (query) {
-			handleType(query);
-		}
-		if (searchQuery.trim()) {
+			setSearchQuery(query);
+			handleAutocomplete(query);
+			setTimeout(() => refetch(), 0);
+		} else if (searchQuery.trim()) {
 			refetch();
 		}
-	}, [searchQuery, refetch, handleType]);
+	}, [searchQuery, refetch, handleAutocomplete, abortStreaming]);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
@@ -449,7 +471,7 @@ const SearchComponent: React.FC = () => {
 							<ModelsDropdown
 								models={models}
 								selectedModel={selectedModel}
-								setSelectedModel={setSelectedModel}
+								setSelectedModel={handleModelChange}
 							/>
 							<TimeRangeDropdown
 								timeRange={timeRange}
@@ -464,7 +486,7 @@ const SearchComponent: React.FC = () => {
 									isStreamingSummary={isStreamingSummary}
 									data={searchData.pages[0]}
 									summary={summary}
-									queryHandler={handleType}
+									handleSearch={handleSearch}
 									requestId={searchData.pages[0].requestId ?? ""}
 									selectedModel={selectedModel}
 								/>
@@ -512,7 +534,7 @@ const SearchComponent: React.FC = () => {
 								isStreamingSummary={isStreamingSummary}
 								data={searchData.pages[0]}
 								summary={summary}
-								queryHandler={handleSearch}
+								handleSearch={handleSearch}
 								requestId={searchData.pages[0].requestId ?? ""}
 								selectedModel={selectedModel}
 							/>

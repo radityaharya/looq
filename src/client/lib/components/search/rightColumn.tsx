@@ -22,22 +22,24 @@ type Props = {
 		content: string;
 		sources: string[];
 	} | null;
-	queryHandler: (query: string) => void;
+	handleSearch: (query: string) => void;
 	isStreamingSummary: boolean;
 	requestId: string;
 	selectedModel: string;
+	className?: string;
 };
 
 export const RightColumn: React.FC<Props> = ({
 	data,
 	summary,
-	queryHandler,
+	handleSearch,
 	isStreamingSummary,
 	requestId,
 	selectedModel,
+	className,
 }) => {
 	return (
-		<FlatCard className="bg-card w-full shadow-lg border-2 border-primary/10 h-[min-content]">
+		<FlatCard className={`bg-card w-full shadow-lg border-2 border-primary/10 ${className}`}>
 			<ShineBorder
 				active={isStreamingSummary}
 				borderWidth={4}
@@ -57,7 +59,7 @@ export const RightColumn: React.FC<Props> = ({
 									? summary.content.join("\n\n")
 									: summary.content
 								} 
-								onSearchClick={queryHandler}
+								onSearchClick={handleSearch}
 							/>
 							<div className="flex flex-wrap gap-2 mt-2">
 								{summary.sources.map((source, index) => (
@@ -84,10 +86,25 @@ export const RightColumn: React.FC<Props> = ({
 							</div>
 						</div>
 					) : (
-						<div className="flex flex-col gap-1">
-							{Array.from({ length: 5 }).map((_, urlIndex) => (
-								<Skeleton key={urlIndex} className="h-4 w-full" />
+						<div className="flex flex-col gap-2">
+							{Array.from({ length: 5 }).map((_, index) => (
+								<Skeleton
+									key={index}
+									className="h-4"
+									style={{ width: `${70 + Math.random() * 30}%` }}
+									delay={index * 150}
+								/>
 							))}
+							<div className="flex gap-2 mt-4">
+								{Array.from({ length: 3 }).map((_, index) => (
+									<Skeleton
+										key={`source-${index}`}
+										className="h-5 rounded-full"
+										style={{ width: `${50 + Math.random() * 40}px` }}
+										delay={800 + index * 100}
+									/>
+								))}
+							</div>
 						</div>
 					)}
 					<Separator className="my-4 w-full" />
@@ -120,7 +137,7 @@ export const RightColumn: React.FC<Props> = ({
 										key={suggestion}
 										variant="outline"
 										className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors text-[10px]"
-										onClick={() => queryHandler(suggestion)}
+										onClick={() => handleSearch(suggestion)}
 									>
 										{suggestion}
 									</Badge>
@@ -144,25 +161,39 @@ export const RightColumn: React.FC<Props> = ({
 export const RightColumnSkeleton: React.FC<{ count?: number }> = ({
 	count = 3,
 }) => {
+	const getRandomWidth = () => {
+		// Generate widths between 70% and 100%
+		return `${70 + Math.random() * 30}%`;
+	};
+
 	return (
 		<FlatCard className="bg-card w-full shadow-lg border-2 border-primary/10 h-[min-content]">
-			{" "}
 			<CardHeader className="bg-accent/40 border-b border-primary/10 py-4">
 				<CardTitle className="flex items-center text-lg font-bold">
 					Insights
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="pt-6">
-				<div className="flex flex-col gap-1 mb-2">
-					{Array.from({ length: 5 }).map((_, urlIndex) => (
-						<Skeleton key={urlIndex} className="h-4 w-full" />
+				<div className="flex flex-col gap-2 mb-2">
+					{Array.from({ length: 5 }).map((_, index) => (
+						<Skeleton
+							key={index}
+							className="h-4"
+							style={{ width: getRandomWidth() }}
+							delay={index * 100} // Stagger the animations
+						/>
 					))}
 				</div>
 				<Separator className="my-4 w-full" />
 				<h3 className="font-semibold mb-3 text-sm">Related Searches</h3>
 				<div className="flex flex-wrap gap-2">
 					{Array.from({ length: 5 }).map((_, index) => (
-						<Skeleton key={index} className="h-4 w-1/4" />
+						<Skeleton
+							key={index}
+							className="h-4"
+							style={{ width: `${40 + Math.random() * 60}px` }}
+							delay={500 + index * 100} // Delayed start after the lines above
+						/>
 					))}
 				</div>
 			</CardContent>
