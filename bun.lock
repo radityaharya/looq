@@ -77,6 +77,7 @@
         "@cloudflare/workers-types": "^4.20250109.0",
         "@commitlint/cli": "^19.6.1",
         "@commitlint/config-conventional": "^19.6.0",
+        "@hono/vite-build": "^1.2.1",
         "@hono/vite-dev-server": "^0.18.0",
         "@rollup/plugin-commonjs": "^28.0.2",
         "@rollup/plugin-node-resolve": "^16.0.0",
@@ -435,6 +436,8 @@
     "@floating-ui/utils": ["@floating-ui/utils@0.2.7", "", {}, "sha512-X8R8Oj771YRl/w+c1HqAC1szL8zWQRwFvgDwT129k9ACdBoud/+/rX9V0qiMl6LWUdP9voC2nDVZYPMQQsb6eA=="],
 
     "@hono/node-server": ["@hono/node-server@1.13.7", "", { "peerDependencies": { "hono": "^4" } }, "sha512-kTfUMsoloVKtRA2fLiGSd9qBddmru9KadNyhJCwgKBxTiNkaAJEwkVN9KV/rS4HtmmNRtUh6P+YpmjRMl0d9vQ=="],
+
+    "@hono/vite-build": ["@hono/vite-build@1.2.1", "", { "peerDependencies": { "hono": "*" } }, "sha512-lTtfA65OZDD9InxCE6BKDjwhRwelDIFvFULZE/IkAWXm4jm08k12lkbYNCTkCRvgT3w5zAVgn2Yd4tNySe6oCw=="],
 
     "@hono/vite-dev-server": ["@hono/vite-dev-server@0.18.0", "", { "dependencies": { "@hono/node-server": "^1.12.0", "minimatch": "^9.0.3" }, "peerDependencies": { "hono": "*", "miniflare": "*", "wrangler": "*" }, "optionalPeers": ["miniflare", "wrangler"] }, "sha512-CVHgDYk3haRnWUI/I2tNydgIIXI2lSczseko5Qvu/n1K6I9GyXzRW4rJFUlLClz3LDLOCgRCW+kDW4YT3BVSLA=="],
 

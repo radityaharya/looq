@@ -7,6 +7,43 @@ import checker from "vite-plugin-checker";
 import compression from "vite-plugin-compression";
 import svgr from "vite-plugin-svgr";
 
+type ChunkConfig = {
+	pattern?: RegExp;
+	includes: string[];
+};
+
+type ChunkMappings = {
+	[key: string]: ChunkConfig;
+};
+
+const CHUNK_MAPPINGS: ChunkMappings = {
+	"vendor-react": {
+		includes: ["react", "react-dom", "react-router-dom"],
+	},
+	"vendor-ui": {
+		pattern: /^@radix-ui\/react-/,
+		includes: ["class-variance-authority", "tailwind-merge"],
+	},
+	"vendor-animation": {
+		includes: ["framer-motion"],
+	},
+	"vendor-forms": {
+		includes: ["react-hook-form", "@hookform/resolvers", "zod"],
+	},
+	"vendor-data": {
+		includes: ["@tanstack/react-query", "sse.js"],
+	},
+	"vendor-i18n": {
+		includes: ["i18next", "react-i18next"],
+	},
+	"vendor-content": {
+		includes: ["react-markdown", "remark-gfm"],
+	},
+	"vendor-utils": {
+		includes: ["clsx", "lucide-react", "next-themes", "sonner"],
+	},
+};
+
 // https://vitejs.dev/config/
 export default defineConfig({
 	server: {
@@ -66,23 +103,32 @@ export default defineConfig({
 				/^prettier/,
 				/^stylelint/,
 			],
-			// output: {
-			//   manualChunks: {
-			//     vendor: ["react", "react-dom", "react-router-dom"],
-			//   },
-			//   // Optimize chunk size
-			//   chunkFileNames: "assets/js/[name]-[hash].js",
-			//   entryFileNames: "assets/js/[name]-[hash].js",
-			//   assetFileNames: ({ name }) => {
-			//     if (/\.(gif|jpe?g|png|svg)$/.test(name ?? "")) {
-			//       return "assets/images/[name]-[hash][extname]";
-			//     }
-			//     if (/\.css$/.test(name ?? "")) {
-			//       return "assets/css/[name]-[hash][extname]";
-			//     }
-			//     return "assets/[name]-[hash][extname]";
-			//   },
-			// },
+			output: {
+				manualChunks: (id) => {
+					for (const [chunkName, config] of Object.entries(CHUNK_MAPPINGS)) {
+						if (
+							config.pattern?.test(id) ||
+							config.includes.some((dep) => id.includes(dep))
+						) {
+							return chunkName;
+						}
+					}
+					return null;
+				},
+				chunkFileNames: "assets/js/[name]-[hash].js",
+				entryFileNames: "assets/js/[name]-[hash].js",
+				assetFileNames: (assetInfo) => {
+					const source =
+						typeof assetInfo.source === "string" ? assetInfo.source : "";
+					if (/\.(gif|jpe?g|png|svg)$/.test(source)) {
+						return "assets/images/[name]-[hash][extname]";
+					}
+					if (/\.css$/.test(source)) {
+						return "assets/css/[name]-[hash][extname]";
+					}
+					return "assets/[name]-[hash][extname]";
+				},
+			},
 		},
 		minify: "terser",
 		terserOptions: {
