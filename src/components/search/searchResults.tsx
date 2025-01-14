@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import type React from "react";
-import type { searchDataResponseSchema } from "src/lib/search";
+import type { searchDataResponseSchema } from "src/lib/schema";
 import type { z } from "zod";
 
 export const SearchResults: React.FC<{

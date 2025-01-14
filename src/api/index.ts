@@ -1,23 +1,20 @@
 import { zValidator } from "@hono/zod-validator";
-import { Hono, Context, Next } from "hono";
+import { Hono, type Context, type Next } from "hono";
 import { cache } from "hono/cache";
 import { logger } from "hono/logger";
-import { getEnv } from "src/lib/env";
+import { getEnv } from "../lib/server/env";
+import { generateSummary, getModels, generateChat } from "../lib/server/ai";
 import {
-  generateSummary,
-  getModels,
-  modelResponseSchema,
-  generateChat,
-} from "src/lib/ai";
-import {
-  autocompleteSchema,
   fetchAutocompleteResults,
   fetchSearchResults,
-  searchSchema,
-} from "src/lib/search";
+} from "../lib/server/search";
 import { hc } from "hono/client";
 import { z } from "zod";
-import { getUserId } from "src/lib/user";
+import {
+  autocompleteSchema,
+  modelResponseSchema,
+  searchSchema,
+} from "../lib/schema";
 
 export type Bindings = {
   SEARXNG_URL: string;
@@ -37,19 +34,6 @@ const getUserIdFromHeader = async (c: Context, next: Next) => {
 export const app = new Hono<{ Bindings: Bindings }>()
   .use(logger())
   .use(getUserIdFromHeader)
-  .use(
-    "*",
-    cache({
-      cacheName: "looq",
-      cacheControl: "max-age=3600",
-      async keyGenerator(c) {
-        const url = new URL(c.req.url);
-        return crypto.subtle
-          .digest("SHA-256", new TextEncoder().encode(url.toString()))
-          .then((hash) => Buffer.from(hash).toString("base64"));
-      },
-    })
-  )
   .get("/search", zValidator("query", searchSchema), async (c) => {
     const query = c.req.valid("query");
     const {
@@ -147,6 +131,34 @@ export const app = new Hono<{ Bindings: Bindings }>()
         context: c,
       });
     }
+  )
+  .get(
+    "*",
+    cache({
+      cacheName: "looq",
+      cacheControl: "max-age=3600",
+      async keyGenerator(c) {
+        return crypto.subtle
+          .digest("SHA-256", new TextEncoder().encode(await c.req.json()))
+          .then((hash) => {
+            return Buffer.from(hash).toString("base64");
+          });
+      },
+    })
+  )
+  .post(
+    "*",
+    cache({
+      cacheName: "looq",
+      cacheControl: "max-age=3600",
+      async keyGenerator(c) {
+        return crypto.subtle
+          .digest("SHA-256", new TextEncoder().encode(await c.req.json()))
+          .then((hash) => {
+            return Buffer.from(hash).toString("base64");
+          });
+      },
+    })
   );
 
 export const api = new Hono().basePath("/api").route("/", app);

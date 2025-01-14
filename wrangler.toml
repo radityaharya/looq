@@ -1,7 +1,7 @@
-name="looq"
+name = "looq"
 compatibility_date = "2024-09-03"
-pages_build_output_dir="./dist"
-compatibility_flags = [ "nodejs_compat_v2" ]
+pages_build_output_dir = "./dist"
+compatibility_flags = ["nodejs_compat_v2"]
 
 
 # Automatically place your workloads in an optimal location to minimize latency.
@@ -37,7 +37,7 @@ compatibility_flags = [ "nodejs_compat_v2" ]
 # Bind a D1 database. D1 is Cloudflare’s native serverless SQL database.
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#d1-databases
 [[d1_databases]]
-binding = "DB" # i.e. available in your Worker on env.DB
+binding = "DB"                                       # i.e. available in your Worker on env.DB
 database_name = "DB"
 database_id = "3f309878-fc92-4d53-9997-64f99519a1e2"
 migrations_dir = "drizzle/migrations"

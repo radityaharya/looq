@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { generateSuggestedSearches, type OpenAICredentials } from "./ai";
 import { accessFetch, type CFAccessCredentials } from "./access";
 import { getDatabaseConnection } from "src/db/db";
@@ -7,58 +6,13 @@ import type { Context } from "hono";
 import { search } from "src/db/schema";
 import { nanoid } from "nanoid";
 import { users } from "src/db/schema";
-
-export const searchSchema = z.object({
-  q: z.string(),
-  language: z.string().optional().default("en-US"),
-  time_range: z.string().optional(),
-  safesearch: z.string().optional().default("0"),
-  categories: z.string().optional().default("general"),
-  pageno: z.string().optional().default("1"),
-});
-
-export const autocompleteSchema = z.object({
-  q: z.string(),
-});
-
-export const autoCompleteResponseSchema = z.tuple([
-  z.string(),
-  z.array(z.string()),
-]);
-
-export const searchResultSchema = z.object({
-  url: z.string(),
-  title: z.string(),
-  content: z.string().optional(),
-  engine: z.string(),
-  engines: z.array(z.string()),
-  positions: z.array(z.number()),
-  score: z.number(),
-  category: z.string(),
-});
-
-export const searchDataResponseSchema = z.object({
-  query: z.string(),
-  number_of_results: z.number(),
-  results: z.array(searchResultSchema),
-  infoboxes: z
-    .array(
-      z.object({
-        infobox: z.string().optional(),
-        content: z.union([z.string(), z.array(z.string())]).optional(),
-        urls: z.array(
-          z.object({
-            title: z.string(),
-            url: z.string(),
-          })
-        ),
-      })
-    )
-    .optional(),
-  suggestions: z.array(z.string()).optional(),
-  requestId: z.string(),
-  pageno: z.string(),
-});
+import {
+  type searchSchema,
+  type autocompleteSchema,
+  autoCompleteResponseSchema,
+  searchDataResponseSchema,
+} from "../schema";
+import type { z } from "zod";
 
 /**
  * Fetches search results based on the provided query and parameters.

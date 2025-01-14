@@ -8,28 +8,13 @@ import { getEnv } from "./env";
 import { getDatabaseConnection } from "src/db/db";
 import { search } from "src/db/schema";
 import { eq, isNotNull, and } from "drizzle-orm";
+import { generateEmbeddings, createRagChain } from "./embeddings";
+import { type summarySchema, modelResponseSchema } from "../schema";
 
 export type OpenAICredentials = {
   OPENAI_KEY: string;
   OPENAI_URL: string;
 };
-
-const summarySchema = z.object({
-  requestId: z.string(),
-  model: z.string().optional(),
-});
-
-export const modelResponseSchema = z.object({
-  data: z.array(
-    z.object({
-      id: z.string(),
-      object: z.string(),
-      created: z.number(),
-      owned_by: z.string(),
-    })
-  ),
-  object: z.string(),
-});
 
 const truncateContent = (content: string, maxLength = 1000) => {
   if (content.length <= maxLength) return content;
@@ -99,43 +84,47 @@ export const generateSummary = async ({
   }
 
   const searchData = result[0];
-
   const urls = searchData.results.map((result) => result.url);
-
   const contents = await fetchContent({ urls: urls ?? [] });
-  const slicedContents = contents.slice(0, 5);
-  const slicedResults = searchData.results.slice(0, 10);
-  const slicedInfoBoxes = searchData.infoBoxes?.slice(0, 5);
-  let prompt =
-    "You are tasked to Make a summary based on user query to a search engine. Only return the content in markdown format without title or any other information. make it concise and digestable. refrain from advertising the result or making any call to actions. be Objective. Bold key points. Use Links\n";
-  if (searchData.query) {
-    prompt += `The user query is: ${searchData.query}`;
-  }
-  if (searchData.infoBoxes && searchData.infoBoxes.length > 0) {
-    prompt += `Here are some infobox from the search engines: ${slicedInfoBoxes
-      ?.map((i) => truncateContent(i.infobox?.substring(0, 100) ?? ""))
-      .join(", ")} \n\n`;
-  }
-  if (searchData.results.length > 0) {
-    prompt += `The search results are: ${slicedResults
-      .map((r) => truncateContent(r.content ?? ""))
-      .join("\n\n")} \n\n`;
-  }
-  if (urls) {
-    const combinedContent = slicedContents
-      .map((c) => `${truncateContent(c.content)}\nURL: ${c.url}`)
-      .join("\n");
-    prompt += `The following are the content of the top search results: \n${combinedContent}`;
-  }
-  prompt +=
-    "\nif the content contains block or any errors, Ignore the content and use your own knowledge to generate the summary\n";
+
+  const vectorStore = await generateEmbeddings({
+    apiKey: OPENAI_KEY,
+    baseURL: OPENAI_URL,
+    model: "together/text-embedding-3-small",
+    contents: contents.slice(0, 5),
+  });
+
+  const systemPrompt = `You are tasked to make a summary based on the following context. 
+Only return the content in markdown format without title or any other information. 
+Make it concise and digestible. Refrain from advertising or making calls to action. 
+Be objective and bold key points. Use links when appropriate.
+
+Context: {context}
+
+Query: ${searchData.query}`;
+
+  const ragChain = createRagChain({
+    vectorStore,
+    llm: {
+      model: data.model ?? "llama-3.3-70b-instruct",
+      baseURL: OPENAI_URL,
+      apiKey: OPENAI_KEY,
+    },
+    systemPrompt,
+  });
 
   return streamSSE(context, async (stream) => {
     try {
-      console.log("Generating summary with model:", data.model);
       const result = await streamText({
-        model: ai(data.model ?? "groq/llama-3.1-70b-versatile"),
-        prompt,
+        model: ai(data.model ?? "llama-3.3-70b-instruct"),
+        messages: [
+          {
+            role: "system",
+            content: await ragChain.invoke({
+              question: searchData.query,
+            }),
+          },
+        ],
         maxTokens: 500,
       });
 
@@ -149,10 +138,12 @@ export const generateSummary = async ({
         });
       }
 
+      const urls = contents.map((c) => c.url);
+
       await stream.writeSSE({
         data: JSON.stringify({
           message: "DONE",
-          sources: [...(slicedContents.map((c) => c.url) ?? [])],
+          sources: urls,
         }),
         event: "DONE",
       });
@@ -162,8 +153,8 @@ export const generateSummary = async ({
         .set({
           summary: {
             content: cumulativeResult,
-            urls: [...(slicedContents.map((c) => c.url) ?? [])],
-            model: data.model ?? "groq/llama-3.1-70b-versatile",
+            urls,
+            model: data.model ?? "llama-3.3-70b-instruct",
           },
         })
         .where(eq(search.id, data.requestId));
@@ -204,7 +195,7 @@ export const generateSuggestedSearches = async ({
 
   try {
     const { object } = await generateObject({
-      model: ai("groq/llama-3.1-70b-versatile"),
+      model: ai("llama-3.3-70b-instruct"),
       schema: z.object({
         suggestions: z.array(z.string()),
       }),
@@ -260,39 +251,63 @@ export const generateChat = async ({
   }
 
   const searchData = result[0];
-  const slicedResults = searchData.results.slice(0, 10);
-  const slicedInfoBoxes = searchData.infoBoxes?.slice(0, 5);
-  const previousMessages = searchData.chat ?? [];
+  const slicedResults = searchData.results.slice(0, 3);
+  const slicedInfoBoxes = searchData.infoBoxes?.slice(0, 2);
+  const previousMessages = (searchData.chat ?? []).slice(-4);
 
-  let prompt = `You are a helpful AI assistant. Use the following search results and context to answer the user's question. Be concise and accurate.\n\n`;
+  let prompt =
+    "You are a helpful AI assistant. Answer concisely using the following context:\n\n";
 
   if (searchData.query) {
-    prompt += `Original search query: ${searchData.query}\n\n`;
-  }
-  if (slicedInfoBoxes?.length) {
-    prompt += `Context from infoboxes: ${slicedInfoBoxes
-      .map((i) => truncateContent(i.infobox?.substring(0, 100) ?? ""))
-      .join(", ")}\n\n`;
-  }
-  if (slicedResults.length) {
-    prompt += `Search results: ${slicedResults
-      .map((r) => truncateContent(r.content ?? ""))
-      .join("\n\n")}\n\n`;
+    prompt += `Search: ${searchData.query}\n\n`;
   }
 
-  prompt += `User question: ${data.message}\n\n`;
+  if (slicedResults.length) {
+    prompt += `Context: ${slicedResults
+      .map((r) => truncateContent(r.content ?? "", 300))
+      .join("\n")}\n\n`;
+  }
+
+  prompt += `Question: ${data.message}`;
+
+  const urls = searchData.results.slice(0, 3).map((result) => result.url);
+  const contents = await fetchContent({ urls: urls ?? [] });
+
+  const vectorStore = await generateEmbeddings({
+    apiKey: OPENAI_KEY,
+    baseURL: OPENAI_URL,
+    model: "together/text-embedding-3-small",
+    contents: contents,
+  });
+
+  const systemPrompt = `You are a helpful AI assistant. Be concise and direct.
+Previous messages:
+${previousMessages.map((m) => `${m.role}: ${m.content}`).join("\n")}
+Context: {context}`;
+
+  const ragChain = createRagChain({
+    vectorStore,
+    llm: {
+      model: data.model ?? "llama-3.3-70b-instruct",
+      baseURL: OPENAI_URL,
+      apiKey: OPENAI_KEY,
+    },
+    systemPrompt,
+  });
 
   return streamSSE(context, async (stream) => {
     try {
       const message = data.message;
-      const model = data.model ?? "groq/llama-3.1-70b-versatile";
+      const model = data.model ?? "llama-3.3-70b-instruct";
 
-      const result = streamText({
+      const result = await streamText({
         model: ai(model),
         messages: [
           {
             role: "system",
-            content: prompt,
+            content: await ragChain.invoke({
+              question: message,
+            }),
           },
           ...previousMessages,
           {

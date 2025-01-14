@@ -26,7 +26,6 @@ export function useSearchHistory(maxItems = 10) {
           timestamp: Date.now(),
         };
 
-        // Remove duplicates and add new item at the start
         const filteredHistory = prev.filter((item) => item.query !== query);
         return [newItem, ...filteredHistory].slice(0, maxItems);
       });

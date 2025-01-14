@@ -4,7 +4,7 @@ import type { z } from "zod";
 import type {
   searchResultSchema,
   searchDataResponseSchema,
-} from "src/lib/search";
+} from "src/lib/schema";
 
 type SearchResult = z.infer<typeof searchResultSchema>;
 
@@ -42,7 +42,6 @@ export const search = pgTable("search", {
   chat: json("chat").$type<ChatMessage[]>(),
 });
 
-// Add relations
 export const usersRelations = relations(users, ({ many }) => ({
   searches: many(search),
 }));

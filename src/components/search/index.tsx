@@ -2,7 +2,6 @@ import {
 	useInfiniteQuery,
 	useQuery,
 } from "@tanstack/react-query";
-import type { searchDataResponseSchema } from "@/lib/search";
 import React from "react";
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -34,11 +33,12 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ArrowUp, ChevronsUpDown } from "lucide-react";
-import { client } from "src/api";
 import { Spinner } from "../ui/spinner";
 import { debounce } from "src/lib/utils";
 import { getUserId, setUserId } from "src/lib/user";
 import { useSearchHistory } from "src/hooks/use-search-history";
+import type { searchDataResponseSchema } from "src/lib/schema";
+import { client } from "src/lib/client/api";
 
 const ModelsDropdown = ({
 	models,
@@ -61,7 +61,7 @@ const ModelsDropdown = ({
 					size={"sm"}
 					className="w-56 justify-between border-2 border-primary/10 flex gap-1 text-xs"
 				>
-					<span className="truncate">{selectedModel.split("/")[1]}</span>
+          <span className="truncate">{selectedModel.includes("/") ? selectedModel.split("/")[1] : selectedModel}</span>
 					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 				</Button>
 			</PopoverTrigger>
@@ -224,7 +224,7 @@ const SearchComponent: React.FC = () => {
 	const { history, addToHistory, clearHistory } = useSearchHistory();
 	const [selectedModel, setSelectedModel] = useLocalStorageState<string>(
 		"selectedModel",
-		"groq/llama-3.1-70b-versatile",
+		"llama-3.3-70b-instruct",
 	);
 	const { autocompleteData, handleAutocomplete } = useAutocomplete(client);
 	const bottomRef = useRef<HTMLDivElement>(null);
@@ -277,13 +277,11 @@ const SearchComponent: React.FC = () => {
 
 			const data = await res.json();
 			
-			// Check for and store new user ID if present
 			const userId = res.headers.get("X-User-Id");
 			if (userId) {
 				setUserId(userId);
 			}
 
-			// Add to search history
 			if (pageParam === "1") {
 				addToHistory(searchQuery, data.requestId);
 			}

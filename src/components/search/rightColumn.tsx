@@ -2,7 +2,6 @@ import { Badge } from "@/components/ui/badge";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { searchDataResponseSchema } from "@/lib/search";
 import type React from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -16,6 +15,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Chat } from "./chat";
+import type { searchDataResponseSchema } from "src/lib/schema";
 
 type Props = {
 	data: z.infer<typeof searchDataResponseSchema>;
