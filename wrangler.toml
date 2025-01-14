@@ -107,3 +107,10 @@ migrations_dir = "drizzle/migrations"
 # [[vectorize]]
 # binding = "MY_INDEX"
 # index_name = "my-index"
+
+[ai]
+binding = "AI"
+
+[[vectorize]]
+binding = "VECTORIZE_INDEX"
+index_name = "langchain"

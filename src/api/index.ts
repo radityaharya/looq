@@ -23,6 +23,8 @@ export type Bindings = {
 	OPENAI_KEY: string;
 	OPENAI_URL: string;
 	DB: D1Database;
+	AI: Ai;
+	VECTORIZE_INDEX: VectorizeIndex;
 };
 
 const getUserIdFromHeader = async (c: Context, next: Next) => {

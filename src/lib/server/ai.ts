@@ -85,19 +85,26 @@ export const generateSummary = async ({
 
 	const searchData = result[0];
 	const urls = searchData.results.map((result) => result.url);
-	const contents = await fetchContent({ urls: urls ?? [] });
+	const contents = await Promise.all(
+		urls.slice(0, 5).map((url) => fetchContent({ urls: [url] })),
+	).then((results) => results.flat());
 
 	const vectorStore = await generateEmbeddings({
 		apiKey: OPENAI_KEY,
 		baseURL: OPENAI_URL,
-		model: "together/text-embedding-3-small",
 		contents: contents.slice(0, 5),
+		AI: context.env.AI,
+		VECTORIZE_INDEX: context.env.VECTORIZE_INDEX,
 	});
 
-	const systemPrompt = `You are tasked to make a summary based on the following context. 
-Only return the content in markdown format without title or any other information. 
-Make it concise and digestible. Refrain from advertising or making calls to action. 
-Be objective and bold key points. Use links when appropriate.
+	const systemPrompt = `You are a precise and efficient summarizer. Your task is to create a clear, factual summary of the provided context.
+Guidelines:
+- Return only markdown format content
+- Be concise and information-dense
+- Focus on key facts and insights
+- Use bullet points for better readability
+- Include relevant links in markdown format
+- Avoid promotional language or calls to action
 
 Context: {context}
 
@@ -126,6 +133,9 @@ Query: ${searchData.query}`;
 					},
 				],
 				maxTokens: 500,
+				temperature: 0.3,
+				presencePenalty: 0.1,
+				frequencyPenalty: 0.1,
 			});
 
 			let cumulativeResult = "";
@@ -251,33 +261,16 @@ export const generateChat = async ({
 	}
 
 	const searchData = result[0];
-	const slicedResults = searchData.results.slice(0, 3);
-	const slicedInfoBoxes = searchData.infoBoxes?.slice(0, 2);
-	const previousMessages = (searchData.chat ?? []).slice(-4);
-
-	let prompt =
-		"You are a helpful AI assistant. Answer concisely using the following context:\n\n";
-
-	if (searchData.query) {
-		prompt += `Search: ${searchData.query}\n\n`;
-	}
-
-	if (slicedResults.length) {
-		prompt += `Context: ${slicedResults
-			.map((r) => truncateContent(r.content ?? "", 300))
-			.join("\n")}\n\n`;
-	}
-
-	prompt += `Question: ${data.message}`;
-
 	const urls = searchData.results.slice(0, 3).map((result) => result.url);
-	const contents = await fetchContent({ urls: urls ?? [] });
+	const contents = await fetchContent({ urls });
+	const previousMessages = (searchData.chat ?? []).slice(-4);
 
 	const vectorStore = await generateEmbeddings({
 		apiKey: OPENAI_KEY,
 		baseURL: OPENAI_URL,
-		model: "together/text-embedding-3-small",
-		contents: contents,
+		contents,
+		AI: context.env.AI,
+		VECTORIZE_INDEX: context.env.VECTORIZE_INDEX,
 	});
 
 	const systemPrompt = `You are a helpful AI assistant. Be concise and direct.
