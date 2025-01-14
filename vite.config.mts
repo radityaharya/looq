@@ -6,7 +6,7 @@ import { defineConfig } from "vite";
 import checker from "vite-plugin-checker";
 import compression from "vite-plugin-compression";
 import svgr from "vite-plugin-svgr";
-
+import { VitePWA } from "vite-plugin-pwa";
 type ChunkConfig = {
 	pattern?: RegExp;
 	includes: string[];
@@ -133,23 +133,28 @@ export default defineConfig({
 		minify: "terser",
 		terserOptions: {
 			compress: {
-				drop_console: true,
-				drop_debugger: true,
-				pure_funcs: ["console.log"],
-				passes: 2,
+				drop_console: process.env.NODE_ENV === "production",
+				drop_debugger: process.env.NODE_ENV === "production",
+				pure_getters: true,
+				unsafe_comps: true,
+				unsafe_Function: true,
+				unsafe_math: true,
+				passes: 3,
 			},
 			mangle: {
 				properties: false,
+				toplevel: true,
+			},
+			format: {
+				comments: false,
 			},
 		},
-		sourcemap: false,
-		chunkSizeWarningLimit: 1000,
-		target: "esnext",
+		sourcemap: process.env.NODE_ENV !== "production",
+		chunkSizeWarningLimit: 800,
 		cssCodeSplit: true,
 		assetsInlineLimit: 4096,
-		reportCompressedSize: false,
 		modulePreload: {
-			polyfill: true, // Enable module preload polyfill
+			polyfill: true,
 			resolveDependencies: (filename, deps, { hostId, hostType }) => {
 				return deps;
 			},
@@ -196,12 +201,57 @@ export default defineConfig({
 			template: "treemap",
 		}),
 		compression({
-			algorithm: "gzip",
+			algorithm: "brotliCompress",
 			ext: ".br",
+			threshold: 512,
+			deleteOriginFile: false,
+			compressionOptions: { level: 11 },
+		}),
+		compression({
+			algorithm: "gzip",
+			ext: ".gz",
+			threshold: 512,
+			deleteOriginFile: false,
 		}),
 		checker({
 			typescript: {
 				tsconfigPath: "./tsconfig.json",
+			},
+		}),
+		VitePWA({
+			registerType: "autoUpdate",
+			includeAssets: ["favicon.ico", "robots.txt", "apple-touch-icon.png"],
+			manifest: {
+				name: "Looq",
+				short_name: "Looq",
+				theme_color: "#000000",
+				icons: [
+					{
+						src: "/favicon-32x32.png",
+						sizes: "32x32",
+						type: "image/png",
+					},
+				],
+			},
+			strategies: "generateSW",
+			workbox: {
+				globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+				runtimeCaching: [
+					{
+						urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+						handler: "CacheFirst",
+						options: {
+							cacheName: "google-fonts-cache",
+							expiration: {
+								maxEntries: 10,
+								maxAgeSeconds: 60 * 60 * 24 * 365, // <== 365 days
+							},
+							cacheableResponse: {
+								statuses: [0, 200],
+							},
+						},
+					},
+				],
 			},
 		}),
 	],

@@ -87,6 +87,7 @@
     "tailwindcss-animate": "^1.0.7",
     "terser": "^5.37.0",
     "vite-plugin-compression": "^0.5.1",
+    "vite-plugin-pwa": "^0.21.1",
     "wrangler": "^3.101.0",
     "zod": "^3.24.1"
   },
