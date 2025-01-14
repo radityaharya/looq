@@ -1,6 +1,6 @@
+import { motion, useMotionTemplate, useMotionValue } from "framer-motion";
 import type React from "react";
 import { useCallback, useEffect } from "react";
-import { motion, useMotionTemplate, useMotionValue } from "framer-motion";
 
 import { cn } from "src/lib/utils";
 

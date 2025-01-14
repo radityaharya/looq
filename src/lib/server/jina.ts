@@ -1,39 +1,39 @@
 import { rerankerRequestSchema, rerankerResponseSchema } from "../schema";
 
 export const rerankResults = async ({
-  JINA_KEY,
-  contents,
-  query,
+	JINA_KEY,
+	contents,
+	query,
 }: {
-  JINA_KEY: string;
-  contents: string[];
-  query: string;
+	JINA_KEY: string;
+	contents: string[];
+	query: string;
 }): Promise<string[]> => {
-  try {
-    const response = await fetch("https://api.jina.ai/v1/rerank", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${JINA_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "jina-reranker-v2-base-multilingual",
-        query,
-        top_n: 3,
-        documents: contents,
-      }),
-    });
+	try {
+		const response = await fetch("https://api.jina.ai/v1/rerank", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${JINA_KEY}`,
+			},
+			body: JSON.stringify({
+				model: "jina-reranker-v2-base-multilingual",
+				query,
+				top_n: 3,
+				documents: contents,
+			}),
+		});
 
-    if (!response.ok) {
-      throw new Error(`Fetch failed with status: ${response.status}`);
-    }
+		if (!response.ok) {
+			throw new Error(`Fetch failed with status: ${response.status}`);
+		}
 
-    const data = rerankerResponseSchema.parse(await response.json());
-    return data.results.map((result: any) => result.document.text);
-  } catch (error) {
-    console.error("Error calling rerank API");
-    return contents.slice(0, 3);
-  }
+		const data = rerankerResponseSchema.parse(await response.json());
+		return data.results.map((result: any) => result.document.text);
+	} catch (error) {
+		console.error("Error calling rerank API");
+		return contents.slice(0, 3);
+	}
 };
 
 /**
@@ -43,16 +43,16 @@ export const rerankResults = async ({
  * @returns A promise that resolves to the fetched content as a string.
  */
 export const fetchJinaContent = async (url: string): Promise<string | null> => {
-  try {
-    const response = await fetch(`https://r.jina.ai/${url}`);
-    if (!response.ok) {
-      throw new Error(`Fetch failed with status: ${response.status}`);
-    }
-    return response.text();
-  } catch (error) {
-    console.error(`Error fetching URL ${url}:`, error);
-    return null;
-  }
+	try {
+		const response = await fetch(`https://r.jina.ai/${url}`);
+		if (!response.ok) {
+			throw new Error(`Fetch failed with status: ${response.status}`);
+		}
+		return response.text();
+	} catch (error) {
+		console.error(`Error fetching URL ${url}:`, error);
+		return null;
+	}
 };
 
 /**
@@ -64,14 +64,14 @@ export const fetchJinaContent = async (url: string): Promise<string | null> => {
  * @returns {Promise<any[]>} - A promise that resolves to an array of fetched Jina contents.
  */
 export const fetchJinaContents = async ({
-  urls,
-  JINA_KEY,
+	urls,
+	JINA_KEY,
 }: {
-  urls: string[];
-  JINA_KEY: string;
+	urls: string[];
+	JINA_KEY: string;
 }) => {
-  const limitedUrls = urls.slice(0, 10);
-  const fetchPromises = limitedUrls.map((url) => fetchJinaContent(url));
-  const results = await Promise.all(fetchPromises);
-  return results.filter((result) => result !== null);
+	const limitedUrls = urls.slice(0, 10);
+	const fetchPromises = limitedUrls.map((url) => fetchJinaContent(url));
+	const results = await Promise.all(fetchPromises);
+	return results.filter((result) => result !== null);
 };

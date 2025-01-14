@@ -1,5 +1,5 @@
-import { fetchJinaContent } from "./jina";
 import { NodeHtmlMarkdown } from "node-html-markdown";
+import { fetchJinaContent } from "./jina";
 
 /**
  * Fetches the content from a single URL using the built-in method.

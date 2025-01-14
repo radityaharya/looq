@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { env, getRuntimeKey } from "hono/adapter";
-import { EnvSchema } from "../schema";
 import type { z } from "zod";
+import { EnvSchema } from "../schema";
 
 type Env = z.infer<typeof EnvSchema>;
 
@@ -14,29 +14,29 @@ type Env = z.infer<typeof EnvSchema>;
  * @throws Throws an error if the environment variable validation fails.
  */
 export const getEnv = (context?: Context): Env => {
-  const getEnvVariable = (key: string) => {
-    if (context && getRuntimeKey() === "workerd") {
-      return context.env[key] ?? env(context)[key] ?? process.env[key];
-    }
-    return process.env[key];
-  };
+	const getEnvVariable = (key: string) => {
+		if (context && getRuntimeKey() === "workerd") {
+			return context.env[key] ?? env(context)[key] ?? process.env[key];
+		}
+		return process.env[key];
+	};
 
-  const schemaKeys = EnvSchema.shape;
-  const values: Record<string, string | undefined> = {};
+	const schemaKeys = EnvSchema.shape;
+	const values: Record<string, string | undefined> = {};
 
-  for (const key in schemaKeys) {
-    values[key] = getEnvVariable(key);
-  }
+	for (const key in schemaKeys) {
+		values[key] = getEnvVariable(key);
+	}
 
-  if (getEnvVariable("SKIP_ENV_CHECK") !== "true") {
-    const parsedValues = EnvSchema.safeParse(values);
-    if (!parsedValues.success) {
-      throw new Error(
-        `Environment variable validation error: ${parsedValues.error.message}`
-      );
-    }
-    return parsedValues.data;
-  }
+	if (getEnvVariable("SKIP_ENV_CHECK") !== "true") {
+		const parsedValues = EnvSchema.safeParse(values);
+		if (!parsedValues.success) {
+			throw new Error(
+				`Environment variable validation error: ${parsedValues.error.message}`,
+			);
+		}
+		return parsedValues.data;
+	}
 
-  return values as Env;
+	return values as Env;
 };

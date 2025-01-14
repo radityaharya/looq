@@ -1,18 +1,4 @@
 import {
-	useInfiniteQuery,
-	useQuery,
-} from "@tanstack/react-query";
-import React from "react";
-import { useCallback, useEffect, useState, useMemo, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
-import { SSE } from "sse.js";
-import type { z } from "zod";
-import Eyeball from "../ui/eyeball";
-import { RightColumn, RightColumnSkeleton } from "./rightColumn";
-import { SearchResults, SearchResultsSkeleton } from "./searchResults";
-import { SearchBar } from "./searchBar";
-import useLocalStorageState from "src/hooks/use-localstorage-state";
-import {
 	Command,
 	CommandEmpty,
 	CommandGroup,
@@ -21,24 +7,35 @@ import {
 	CommandList,
 } from "@/components/ui/command";
 import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "../ui/button";
-import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { ArrowUp, ChevronsUpDown } from "lucide-react";
-import { Spinner } from "../ui/spinner";
-import { debounce } from "src/lib/utils";
-import { getUserId, setUserId } from "src/lib/user";
+import React from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import useLocalStorageState from "src/hooks/use-localstorage-state";
 import { useSearchHistory } from "src/hooks/use-search-history";
-import type { searchDataResponseSchema } from "src/lib/schema";
 import { client } from "src/lib/client/api";
+import type { searchDataResponseSchema } from "src/lib/schema";
+import { getUserId, setUserId } from "src/lib/user";
+import { debounce } from "src/lib/utils";
+import { SSE } from "sse.js";
+import type { z } from "zod";
+import { Button } from "../ui/button";
+import Eyeball from "../ui/eyeball";
+import { Spinner } from "../ui/spinner";
+import { RightColumn, RightColumnSkeleton } from "./rightColumn";
+import { SearchBar } from "./searchBar";
+import { SearchResults, SearchResultsSkeleton } from "./searchResults";
 
 const ModelsDropdown = ({
 	models,
@@ -61,7 +58,11 @@ const ModelsDropdown = ({
 					size={"sm"}
 					className="w-56 justify-between border-2 border-primary/10 flex gap-1 text-xs"
 				>
-          <span className="truncate">{selectedModel.includes("/") ? selectedModel.split("/")[1] : selectedModel}</span>
+					<span className="truncate">
+						{selectedModel.includes("/")
+							? selectedModel.split("/")[1]
+							: selectedModel}
+					</span>
 					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 				</Button>
 			</PopoverTrigger>
@@ -262,21 +263,24 @@ const SearchComponent: React.FC = () => {
 				time_range: timeRange,
 				pageno: pageParam.toString(),
 			};
-			
-			const res = await client.api.search.$get({
-				query: searchParams,
-			}, {
-				headers: {
-					'X-User-Id': getUserId()
-				}
-			});
+
+			const res = await client.api.search.$get(
+				{
+					query: searchParams,
+				},
+				{
+					headers: {
+						"X-User-Id": getUserId(),
+					},
+				},
+			);
 
 			if (res.status !== 200) {
 				throw new Error(`status_code ${res.status}`);
 			}
 
 			const data = await res.json();
-			
+
 			const userId = res.headers.get("X-User-Id");
 			if (userId) {
 				setUserId(userId);
@@ -430,7 +434,7 @@ const SearchComponent: React.FC = () => {
 							autocompleteData={
 								searchQuery.trim() && autocompleteData.length > 0
 									? { type: "autocomplete", data: autocompleteData }
-									: { type: "history", data: history.map(h => h.query) }
+									: { type: "history", data: history.map((h) => h.query) }
 							}
 							handleSearch={handleSearch}
 							isFocused={isFocused}
@@ -482,9 +486,7 @@ const SearchComponent: React.FC = () => {
 								Press <span className="font-bold font-mono">Enter</span> to
 								search
 							</p>
-						) : (
-							null
-						)}
+						) : null}
 						<div ref={bottomRef} />
 					</div>
 

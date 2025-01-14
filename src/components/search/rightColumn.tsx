@@ -2,20 +2,20 @@ import { Badge } from "@/components/ui/badge";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import type React from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import type { z } from "zod";
-import { FlatCard } from "../ui/flat-card";
-import { ShineBorder } from "../ui/shine-border";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Chat } from "./chat";
+import type React from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { searchDataResponseSchema } from "src/lib/schema";
+import type { z } from "zod";
+import { FlatCard } from "../ui/flat-card";
+import { ShineBorder } from "../ui/shine-border";
+import { Chat } from "./chat";
 
 type Props = {
 	data: z.infer<typeof searchDataResponseSchema>;
@@ -211,6 +211,5 @@ export const RightColumnSkeleton: React.FC<{ count?: number }> = ({
 		</FlatCard>
 	);
 };
-
 
 export default RightColumn;

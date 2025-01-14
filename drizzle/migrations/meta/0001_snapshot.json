@@ -1,68 +1,68 @@
 {
-  "id": "c9bb5578-b544-4677-a20a-c85047ca658b",
-  "prevId": "2615302a-c359-4627-8357-bbca8df7cf34",
-  "version": "7",
-  "dialect": "postgresql",
-  "tables": {
-    "public.search": {
-      "name": "search",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "query": {
-          "name": "query",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "results": {
-          "name": "results",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "infoBoxes": {
-          "name": "infoBoxes",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created": {
-          "name": "created",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "summary": {
-          "name": "summary",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "chat": {
-          "name": "chat",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
-    }
-  },
-  "enums": {},
-  "schemas": {},
-  "sequences": {},
-  "_meta": {
-    "columns": {},
-    "schemas": {},
-    "tables": {}
-  }
+	"id": "c9bb5578-b544-4677-a20a-c85047ca658b",
+	"prevId": "2615302a-c359-4627-8357-bbca8df7cf34",
+	"version": "7",
+	"dialect": "postgresql",
+	"tables": {
+		"public.search": {
+			"name": "search",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true
+				},
+				"query": {
+					"name": "query",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"results": {
+					"name": "results",
+					"type": "json",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"infoBoxes": {
+					"name": "infoBoxes",
+					"type": "json",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created": {
+					"name": "created",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"summary": {
+					"name": "summary",
+					"type": "json",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"chat": {
+					"name": "chat",
+					"type": "json",
+					"primaryKey": false,
+					"notNull": false
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {}
+		}
+	},
+	"enums": {},
+	"schemas": {},
+	"sequences": {},
+	"_meta": {
+		"columns": {},
+		"schemas": {},
+		"tables": {}
+	}
 }

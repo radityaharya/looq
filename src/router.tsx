@@ -1,7 +1,7 @@
 import {
+	Navigate,
 	type RouteObject,
 	createBrowserRouter,
-	Navigate,
 } from "react-router-dom";
 import ErrorPage from "./components/error-page";
 import { getDefaultLayout } from "./components/layout";

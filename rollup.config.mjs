@@ -1,12 +1,12 @@
-import { glob } from "glob";
+import { builtinModules } from "node:module";
 import { extname, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { builtinModules } from "node:module";
-import typescript from "@rollup/plugin-typescript";
-import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
-import less from "rollup-plugin-less";
 import json from "@rollup/plugin-json";
+import resolve from "@rollup/plugin-node-resolve";
+import typescript from "@rollup/plugin-typescript";
+import { glob } from "glob";
+import less from "rollup-plugin-less";
 
 export default {
 	input: Object.fromEntries(
