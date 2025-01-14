@@ -1,11 +1,17 @@
-import { createOpenAI } from "@ai-sdk/openai";
-import { generateObject, streamText } from "ai";
+import { ChatOpenAI } from "@langchain/openai";
+import {
+	HumanMessage,
+	SystemMessage,
+	AIMessage,
+} from "@langchain/core/messages";
+import { StringOutputParser } from "@langchain/core/output_parsers";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { and, eq, isNotNull } from "drizzle-orm";
 import type { Context } from "hono";
 import { streamSSE } from "hono/streaming";
 import { getDatabaseConnection } from "src/db/db";
 import { search } from "src/db/schema";
-import { z } from "zod";
+import type { z } from "zod";
 import { modelResponseSchema, type summarySchema } from "../schema";
 import { createRagChain, generateEmbeddings } from "./embeddings";
 import { getEnv } from "./env";
@@ -44,9 +50,14 @@ export const generateSummary = async ({
 	data: z.infer<typeof summarySchema>;
 	context: Context;
 }): Promise<any> => {
-	const ai = createOpenAI({
-		apiKey: OPENAI_KEY,
-		baseURL: OPENAI_URL,
+	const chatModel = new ChatOpenAI({
+		modelName: data.model ?? "llama-3.3-70b-instruct",
+		configuration: {
+			baseURL: OPENAI_URL,
+			apiKey: OPENAI_KEY,
+		},
+		temperature: 0.3,
+		streaming: true,
 	});
 
 	const db = await getDatabaseConnection(context);
@@ -122,31 +133,32 @@ Query: ${searchData.query}`;
 
 	return streamSSE(context, async (stream) => {
 		try {
-			const result = await streamText({
-				model: ai(data.model ?? "llama-3.3-70b-instruct"),
-				messages: [
-					{
-						role: "system",
-						content: await ragChain.invoke({
-							question: searchData.query,
-						}),
-					},
-				],
-				maxTokens: 500,
-				temperature: 0.3,
-				presencePenalty: 0.1,
-				frequencyPenalty: 0.1,
-			});
-
 			let cumulativeResult = "";
 
-			for await (const chunk of result.textStream) {
-				cumulativeResult += chunk;
-				await stream.writeSSE({
-					data: JSON.stringify({ content: cumulativeResult }),
-					event: "ai-response",
-				});
-			}
+			const handler = {
+				handleLLMNewToken(token: string) {
+					try {
+						cumulativeResult += token;
+						void stream.writeSSE({
+							data: JSON.stringify({ content: cumulativeResult }),
+							event: "ai-response",
+						});
+					} catch (error) {
+						console.error("Error in streaming token:", error);
+					}
+				},
+			};
+
+			await chatModel.invoke(
+				[
+					new SystemMessage(
+						await ragChain.invoke({
+							question: searchData.query,
+						}),
+					),
+				],
+				{ callbacks: [handler] },
+			);
 
 			const urls = contents.map((c) => c.url);
 
@@ -198,22 +210,31 @@ export const generateSuggestedSearches = async ({
 	query: string;
 	additionalContext?: string;
 }): Promise<{ suggestions: string[] }> => {
-	const ai = createOpenAI({
-		apiKey: OPENAI_KEY,
-		baseURL: OPENAI_URL,
+	const chatModel = new ChatOpenAI({
+		configuration: {
+			baseURL: OPENAI_URL,
+			apiKey: OPENAI_KEY,
+		},
+		modelName: "llama-3.3-70b-instruct",
+		temperature: 0,
 	});
 
+	const prompt = ChatPromptTemplate.fromMessages([
+		[
+			"system",
+			"Generate 5 suggested searches based on the user query and search results. Return them as a comma-separated list.",
+		],
+		["human", `Query: "${query}"\n\nSearch results:\n${additionalContext}`],
+	]);
+
+	const chain = prompt.pipe(chatModel).pipe(new StringOutputParser());
+
 	try {
-		const { object } = await generateObject({
-			model: ai("llama-3.3-70b-instruct"),
-			schema: z.object({
-				suggestions: z.array(z.string()),
-			}),
-			prompt: `Generate 5 suggested searches based on the user query and the search results. The user query is: "${query}".\n\nSearch results:\n${additionalContext}`,
-		});
-		return object;
+		const result = await chain.invoke({});
+		const suggestions = result.split(",").map((s) => s.trim());
+		return { suggestions: suggestions.slice(0, 5) };
 	} catch (error) {
-		console.error("Error calling OpenAI API:", error);
+		console.error("Error generating suggestions:", error);
 		return { suggestions: [] };
 	}
 };
@@ -245,9 +266,15 @@ export const generateChat = async ({
 	data: { requestId: string; message: string; model: string };
 	context: Context;
 }): Promise<any> => {
-	const ai = createOpenAI({
-		apiKey: OPENAI_KEY,
-		baseURL: OPENAI_URL,
+	const chatModel = new ChatOpenAI({
+		modelName: data.model ?? "llama-3.3-70b-instruct",
+		configuration: {
+			baseURL: OPENAI_URL,
+			apiKey: OPENAI_KEY,
+			timeout: 60000, // 60 seconds
+		},
+		temperature: 0.7,
+		streaming: true,
 	});
 
 	const db = await getDatabaseConnection(context);
@@ -276,6 +303,8 @@ export const generateChat = async ({
 	const systemPrompt = `You are a helpful AI assistant. Be concise and direct.
 Previous messages:
 ${previousMessages.map((m) => `${m.role}: ${m.content}`).join("\n")}
+Generated summary:
+${searchData.summary?.content}
 Context: {context}`;
 
 	const ragChain = createRagChain({
@@ -290,36 +319,37 @@ Context: {context}`;
 
 	return streamSSE(context, async (stream) => {
 		try {
-			const message = data.message;
-			const model = data.model ?? "llama-3.3-70b-instruct";
-
-			const result = await streamText({
-				model: ai(model),
-				messages: [
-					{
-						role: "system",
-						content: await ragChain.invoke({
-							question: message,
-						}),
-					},
-					...previousMessages,
-					{
-						role: "user",
-						content: message,
-					},
-				],
-				maxTokens: 500,
-			});
-
 			let cumulativeResult = "";
 
-			for await (const chunk of result.textStream) {
-				cumulativeResult += chunk;
-				await stream.writeSSE({
-					data: JSON.stringify({ content: cumulativeResult }),
-					event: "ai-response",
-				});
-			}
+			const handler = {
+				handleLLMNewToken(token: string) {
+					try {
+						cumulativeResult += token;
+						void stream.writeSSE({
+							data: JSON.stringify({ content: cumulativeResult }),
+							event: "ai-response",
+						});
+					} catch (error) {
+						console.error("Error in streaming token:", error);
+					}
+				},
+			};
+
+			const messages = [
+				new SystemMessage(
+					await ragChain.invoke({
+						question: data.message,
+					}),
+				),
+				...previousMessages.map((m) =>
+					m.role === "user"
+						? new HumanMessage(m.content)
+						: new AIMessage(m.content),
+				),
+				new HumanMessage(data.message),
+			];
+
+			await chatModel.invoke(messages, { callbacks: [handler] });
 
 			await db
 				.update(search)
